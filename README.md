@@ -16,7 +16,7 @@ Command line interface (CLI) for WiBeee (old Mirubee) meter.
 
 ## Requirements
 
-`pip install jxmlease`
+`pip install jxmlease requests`
 
 # Installation
 

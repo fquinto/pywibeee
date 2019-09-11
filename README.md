@@ -59,34 +59,34 @@ Enjoy! :)
 ### Get version
 
 ```
-$ python main.py --host 192.168.1.150 --get version
+$ pywibeee --host 192.168.1.150 --get version
 {'response': {'webversion': '3.4.614'}}
 ```
 
 ### Get model
 
 ```
-$ python main.py --host 192.168.1.150 --get model
+$ pywibeee --host 192.168.1.150 --get model
 {'response': {'model': 'WBB'}}
 ```
 
 ### Get info
 
 ```
-$ python main.py --autodiscover -g info
+$ pywibeee --autodiscover -get info
 {'response': {'host': '192.168.1.150', 'model': 'WBB', 'webversion': '3.4.614'}}
 ```
 
 ### Get sensors
 
 ```
-$ python main.py -a -g sensors
+$ pywibeee --auto -get sensors
 ```
 
 ### Get status
 
 ```
-$ python main.py --host 192.168.1.150 --get status
+$ pywibeee --host 192.168.1.150 --get status
 {'response': {'coilStatus': '',
               'fase1_angle': '0.00',
               'fase1_energia_activa': '1213',

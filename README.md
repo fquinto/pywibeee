@@ -184,7 +184,7 @@ $ python main.py --host 192.168.1.150 --get status
 - Default usernames / passwords:
     - Basic: `user / user`
     - Admin: `admin / Sm1l1cs?`
-    - Admin another: `admin/ Wib333?`
+    - Admin another: `admin / Wib333?`
 - OTA comands: WbStartBootloaderProccess, WbFinishBootloaderProccess
 - Last (11/09/2019) OTA firmware file url: https://app.mirubee.com/api/fw/wbb/FOTAFile_V3.4.614_WBB.bin
     - MD5: 57d8c4a3c77e510fe0ae6ff44cdb7afc
@@ -231,9 +231,9 @@ $ python setup.py install
 - https://realpython.com/command-line-interfaces-python-argparse/
 
 
-`pip3 install --user pipenv`
-`pipenv install requests`
-`pipenv install jxmlease`
+- `pip3 install --user pipenv`
+- `pipenv install requests`
+- `pipenv install jxmlease`
 
 ```
 pipenv shell
@@ -242,11 +242,11 @@ pipenv run
 
 ## Generating distribution archives
 
-`python3 -m pip install --user --upgrade setuptools wheel`
-`python3 setup.py sdist bdist_wheel`
-`python setup.py sdist`
-`python -m pip install .`
-`python tests/test_project.py`
+- `python3 -m pip install --user --upgrade setuptools wheel`
+- `python3 setup.py sdist bdist_wheel`
+- `python setup.py sdist`
+- `python -m pip install .`
+- `python tests/test_project.py`
 
 # License
 

@@ -182,11 +182,12 @@ $ python main.py --host 192.168.1.150 --get status
 
 - Default IP for WiBeee (old Mirubee): 192.168.1.150
 - Default usernames / passwords:
-    - Basic: user / user
-    - Admin: admin / Sm1l1cs?
-    - Admin another: admin/ Wib333?
+    - Basic: `user / user`
+    - Admin: `admin / Sm1l1cs?`
+    - Admin another: `admin/ Wib333?`
 - OTA comands: WbStartBootloaderProccess, WbFinishBootloaderProccess
-- Last (11/09/2019) OTA firmware file url: https://app.mirubee.com/api/fw/wbb/FOTAFile_V3.4.614_WBB.bin (MD5: 57d8c4a3c77e510fe0ae6ff44cdb7afc)
+- Last (11/09/2019) OTA firmware file url: https://app.mirubee.com/api/fw/wbb/FOTAFile_V3.4.614_WBB.bin
+    - MD5: 57d8c4a3c77e510fe0ae6ff44cdb7afc
 
 # Models WiBeee
 
@@ -207,13 +208,15 @@ $ python main.py --host 192.168.1.150 --get status
 
 If you want to install latest source code:
 
-$ pip install git+http://github.com/fquinto/pywibeee
+`$ pip install git+http://github.com/fquinto/pywibeee`
 
 or
 
+```
 $ git clone git://github.com/fquinto/pywibeee
 $ cd pywibeee
 $ python setup.py install
+```
 
 # Changelog
 
@@ -227,13 +230,15 @@ $ python setup.py install
 
 - https://realpython.com/command-line-interfaces-python-argparse/
 
-`pip3 install --user pipenv`
-pipenv install requests
-pipenv install jxmlease
 
+`pip3 install --user pipenv`
+`pipenv install requests`
+`pipenv install jxmlease`
+
+```
 pipenv shell
 pipenv run
-
+```
 
 ## Generating distribution archives
 

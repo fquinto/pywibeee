@@ -1,0 +1,14 @@
+# this file is *not* meant to cover or endorse the use of travis, but rather to
+# help confirm pull requests to this project.
+
+language: python
+python:
+  - "3.6"
+  - "3.7"
+install:
+  - "pip install -r requirements.txt"
+  - "pip install coveralls nose"
+script:
+  - "coverage run --source=pywibeee setup.py nosetests"
+notifications:
+  email: false

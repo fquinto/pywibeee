@@ -1,0 +1,27 @@
+# general things to ignore
+*.pyc
+venv/
+bin/
+build/
+develop-eggs/
+dist/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+*.eggs
+*.py[cod]
+__pycache__/
+*.so
+*~
+.mypy_cache/
+.vscode
+
+# due to using tox and pytest
+.tox
+.cache

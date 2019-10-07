@@ -16,7 +16,7 @@ Command line interface (CLI) for WiBeee (old Mirubee) meter.
 
 ## Requirements
 
-`pip install jxmlease requests`
+`pip install xmltodict requests`
 
 # Installation
 
@@ -60,122 +60,35 @@ Enjoy! :)
 
 ```
 $ pywibeee --host 192.168.1.150 --get version
-{'response': {'webversion': '3.4.614'}}
+{"response": {"webversion": "3.4.614"}}
 ```
 
 ### Get model
 
 ```
 $ pywibeee --host 192.168.1.150 --get model
-{'response': {'model': 'WBB'}}
+{"response": {"model": "WBB", "model_description": "Wibeee BOX"}}
 ```
 
 ### Get info
 
 ```
-$ pywibeee --autodiscover -get info
-{'response': {'host': '192.168.1.150', 'model': 'WBB', 'webversion': '3.4.614'}}
+$ pywibeee --host 192.168.1.150 -g info
+{"response": {"model": "WBB", "model_description": "Wibeee BOX", "webversion": "3.4.614", "host": "192.168.1.150"}}
 ```
 
-### Get sensors
+### Get sensors with autodiscover
 
 ```
-$ pywibeee --auto -get sensors
+$ pywibeee --auto -g sensors
+{"vrms": ["Vrms", "V", "mdi:power-plug"], "irms": ["Irms", "A", "mdi:flash-auto"], "p_aparent": ["Apparent Power", "VA", "mdi:flash-circle"], "p_activa": ["Active Power", "W", "mdi:flash"], "p_reactiva_ind": ["Inductive Reactive Power", "VArL", "mdi:flash-outline"], "p_reactiva_cap": ["Capacitive Reactive Power", "VArC", "mdi:flash-outline"], "frecuencia": ["Frequency", "Hz", "mdi:current-ac"], "factor_potencia": ["Power Factor", " ", "mdi:math-cos"], "energia_activa": ["Active Energy", "Wh", "mdi:pulse"], "energia_reactiva_ind": ["Inductive Reactive Energy", "VArLh", "mdi:alpha-e-circle-outline"], "energia_reactiva_cap": ["Capacitive Reactive Energy", "VArCh", "mdi:alpha-e-circle-outline"], "angle": ["Angle", "\u00b0", "mdi:angle-acute"], "thd_total": ["THD Current", "%", "mdi:chart-bubble"], "thd_fund": ["THD Current (fundamental)", "A", "mdi:vector-point"], "thd_ar3": ["THD Current Harmonic 3", "A", "mdi:numeric-3"], "thd_ar5": ["THD Current Harmonic 5", "A", "mdi:numeric-5"], "thd_ar7": ["THD Current Harmonic 7", "A", "mdi:numeric-7"], "thd_ar9": ["THD Current Harmonic 9", "A", "mdi:numeric-9"], "thd_tot_V": ["THD Voltage", "%", "mdi:chart-bubble"], "thd_fun_V": ["THD Voltage (fundamental)", "V", "mdi:vector-point"], "thd_ar3_V": ["THD Voltage Harmonic 3", "V", "mdi:numeric-3"], "thd_ar5_V": ["THD Voltage Harmonic 5", "V", "mdi:numeric-5"], "thd_ar7_V": ["THD Voltage Harmonic 7", "V", "mdi:numeric-7"], "thd_ar9_V": ["THD Voltage Harmonic 9", "V", "mdi:numeric-9"]}
 ```
 
 ### Get status
 
 ```
 $ pywibeee --host 192.168.1.150 --get status
-{'response': {'coilStatus': '',
-              'fase1_angle': '0.00',
-              'fase1_energia_activa': '1213',
-              'fase1_energia_reactiva_cap': '969',
-              'fase1_energia_reactiva_ind': '1',
-              'fase1_factor_potencia': '-0.750',
-              'fase1_frecuencia': '50.08',
-              'fase1_irms': '1.70',
-              'fase1_p_activa': '290.11',
-              'fase1_p_aparent': '386.64',
-              'fase1_p_reactiva_cap': '255.60',
-              'fase1_p_reactiva_ind': '0.00',
-              'fase1_thd_ar3': '0.60',
-              'fase1_thd_ar3_V': '0.00',
-              'fase1_thd_ar5': '0.50',
-              'fase1_thd_ar5_V': '0.00',
-              'fase1_thd_ar7': '0.40',
-              'fase1_thd_ar7_V': '0.00',
-              'fase1_thd_ar9': '0.30',
-              'fase1_thd_ar9_V': '0.00',
-              'fase1_thd_fun_V': '227.50',
-              'fase1_thd_fund': '1.50',
-              'fase1_thd_tot_V': '0.00',
-              'fase1_thd_total': '61.60',
-              'fase1_vrms': '227.48',
-              'fase2_angle': '0.00',
-              'fase2_energia_activa': '188',
-              'fase2_energia_reactiva_cap': '0',
-              'fase2_energia_reactiva_ind': '12',
-              'fase2_factor_potencia': '-0.616',
-              'fase2_frecuencia': '50.08',
-              'fase2_irms': '0.36',
-              'fase2_p_activa': '50.04',
-              'fase2_p_aparent': '81.19',
-              'fase2_p_reactiva_cap': '0.00',
-              'fase2_p_reactiva_ind': '0.00',
-              'fase2_thd_ar3': '0.00',
-              'fase2_thd_ar3_V': '0.00',
-              'fase2_thd_ar5': '0.00',
-              'fase2_thd_ar5_V': '0.00',
-              'fase2_thd_ar7': '0.00',
-              'fase2_thd_ar7_V': '0.00',
-              'fase2_thd_ar9': '0.00',
-              'fase2_thd_ar9_V': '0.00',
-              'fase2_thd_fun_V': '227.50',
-              'fase2_thd_fund': '0.00',
-              'fase2_thd_tot_V': '0.00',
-              'fase2_thd_total': '0.00',
-              'fase2_vrms': '227.48',
-              'fase3_angle': '0.00',
-              'fase3_energia_activa': '1179',
-              'fase3_energia_reactiva_cap': '893',
-              'fase3_energia_reactiva_ind': '0',
-              'fase3_factor_potencia': '0.774',
-              'fase3_frecuencia': '50.08',
-              'fase3_irms': '1.64',
-              'fase3_p_activa': '288.61',
-              'fase3_p_aparent': '372.72',
-              'fase3_p_reactiva_cap': '235.85',
-              'fase3_p_reactiva_ind': '0.00',
-              'fase3_thd_ar3': '0.60',
-              'fase3_thd_ar3_V': '0.00',
-              'fase3_thd_ar5': '0.50',
-              'fase3_thd_ar5_V': '0.00',
-              'fase3_thd_ar7': '0.40',
-              'fase3_thd_ar7_V': '0.00',
-              'fase3_thd_ar9': '0.30',
-              'fase3_thd_ar9_V': '0.00',
-              'fase3_thd_fun_V': '227.50',
-              'fase3_thd_fund': '1.40',
-              'fase3_thd_tot_V': '0.00',
-              'fase3_thd_total': '66.80',
-              'fase3_vrms': '227.48',
-              'fase4_energia_activa': '2581',
-              'fase4_energia_reactiva_cap': '1863',
-              'fase4_energia_reactiva_ind': '14',
-              'fase4_factor_potencia': '-0.061',
-              'fase4_frecuencia': '50.08',
-              'fase4_irms': '3.70',
-              'fase4_p_activa': '51.54',
-              'fase4_p_aparent': '840.55',
-              'fase4_p_reactiva_cap': '19.75',
-              'fase4_p_reactiva_ind': '0.00',
-              'fase4_vrms': '227.48',
-              'ground': '0.00',
-              'model': 'WBB',
-              'scale': '100',
-              'time': '1567374124',
-              'webversion': '3.4.614'}}
+{"response": {"model": "WBB", "webversion": "3.4.614", "time": "1570484447", "fase1_vrms": "228.70", "fase1_irms": "1.59", "fase1_p_aparent": "362.65", "fase1_p_activa": "264.34", "fase1_p_reactiva_ind": "0.00", "fase1_p_reactiva_cap": "248.27", "fase1_frecuencia": "50.08", "fase1_factor_potencia": "-0.729", "fase1_energia_activa": "222157", "fase1_energia_reactiva_ind": "4631", "fase1_energia_reactiva_cap": "188269", "fase1_angle": "0.00", "fase1_thd_total": "64.60", "fase1_thd_fund": "1.40", "fase1_thd_ar3": "0.60", "fase1_thd_ar5": "0.50", "fase1_thd_ar7": "0.40", "fase1_thd_ar9": "0.40", "fase1_thd_tot_V": "0.00", "fase1_thd_fun_V": "228.50", "fase1_thd_ar3_V": "0.00", "fase1_thd_ar5_V": "0.00", "fase1_thd_ar7_V": "0.00", "fase1_thd_ar9_V": "0.00", "fase2_vrms": "228.70", "fase2_irms": "0.34", "fase2_p_aparent": "76.77", "fase2_p_activa": "50.99", "fase2_p_reactiva_ind": "0.00", "fase2_p_reactiva_cap": "0.00", "fase2_frecuencia": "50.08", "fase2_factor_potencia": "-0.664", "fase2_energia_activa": "47714", "fase2_energia_reactiva_ind": "5021", "fase2_energia_reactiva_cap": "641", "fase2_angle": "0.00", "fase2_thd_total": "0.00", "fase2_thd_fund": "0.00", "fase2_thd_ar3": "0.00", "fase2_thd_ar5": "0.00", "fase2_thd_ar7": "0.00", "fase2_thd_ar9": "0.00", "fase2_thd_tot_V": "0.00", "fase2_thd_fun_V": "228.50", "fase2_thd_ar3_V": "0.00", "fase2_thd_ar5_V": "0.00", "fase2_thd_ar7_V": "0.00", "fase2_thd_ar9_V": "0.00", "fase3_vrms": "228.70", "fase3_irms": "1.53", "fase3_p_aparent": "349.48", "fase3_p_activa": "265.40", "fase3_p_reactiva_ind": "0.00", "fase3_p_reactiva_cap": "227.37", "fase3_frecuencia": "50.08", "fase3_factor_potencia": "0.759", "fase3_energia_activa": "187069", "fase3_energia_reactiva_ind": "196", "fase3_energia_reactiva_cap": "159927", "fase3_angle": "0.00", "fase3_thd_total": "66.10", "fase3_thd_fund": "1.30", "fase3_thd_ar3": "0.60", "fase3_thd_ar5": "0.50", "fase3_thd_ar7": "0.40", "fase3_thd_ar9": "0.00", "fase3_thd_tot_V": "0.00", "fase3_thd_fun_V": "228.50", "fase3_thd_ar3_V": "0.00", "fase3_thd_ar5_V": "0.00", "fase3_thd_ar7_V": "0.00", "fase3_thd_ar9_V": "0.00", "fase4_vrms": "228.70", "fase4_irms": "3.45", "fase4_p_aparent": "788.90", "fase4_p_activa": "49.93", "fase4_p_reactiva_ind": "0.00", "fase4_p_reactiva_cap": "20.90", "fase4_frecuencia": "50.08", "fase4_factor_potencia": "-0.063", "fase4_energia_activa": "456941", "fase4_energia_reactiva_ind": "9849", "fase4_energia_reactiva_cap": "348839", "scale": "100", "coilStatus": null, "ground": "0.00", "model_description": "Wibeee BOX"}}
 ```
 
 # Notes
@@ -189,7 +102,7 @@ $ pywibeee --host 192.168.1.150 --get status
 - Last (11/09/2019) OTA firmware file url: https://app.mirubee.com/api/fw/wbb/FOTAFile_V3.4.614_WBB.bin
     - MD5: 57d8c4a3c77e510fe0ae6ff44cdb7afc
 
-# Models WiBeee
+# Models description WiBeee
 
  - WBM = Wibeee 1Ph
  - WBT = Wibeee 3Ph
@@ -221,6 +134,7 @@ $ python setup.py install
 # Changelog
 
 - 0.0.1 First draft functional version.
+- 0.0.2 Improve json output. Remove dependency jxmlease. New dependency xmltodict. Added model description.
 
 # Future development
 
@@ -233,7 +147,7 @@ $ python setup.py install
 
 - `pip3 install --user pipenv`
 - `pipenv install requests`
-- `pipenv install jxmlease`
+- `pipenv install xmltodict`
 
 ```
 pipenv shell

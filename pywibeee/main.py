@@ -3,7 +3,7 @@
 
 """Command line interface (CLI) for WiBeee (old Mirubee) meter."""
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 import argparse
 import requests
@@ -11,7 +11,7 @@ import socket
 from xml.etree import ElementTree
 import sys
 import time
-import jxmlease
+import xmltodict
 import json
 from multiprocessing import Process, Queue
 
@@ -19,7 +19,7 @@ from multiprocessing import Process, Queue
 class WiBeee():
     """WiBeee class."""
 
-    def __init__(self, host='192.168.1.150', timeout=10):
+    def __init__(self, host=None, timeout=10):
         """First init class."""
         self.host = host
         self._request = None
@@ -27,6 +27,7 @@ class WiBeee():
         self.data = None
         self.cmdport = 550
         self.model = None
+        self.modelDescription = None
         self.version = None
         self.outformat = 'json'
         self.timedata = None
@@ -36,8 +37,12 @@ class WiBeee():
         """Get own IP."""
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        s.connect(('<broadcast>', 0))
-        return s.getsockname()[0]
+        try:
+            s.connect(('<broadcast>', 0))
+            ip = s.getsockname()[0]
+        except Exception:
+            ip = '127.0.0.1'
+        return ip
 
     def getSubnet(self):
         """Get own subnet."""
@@ -83,10 +88,11 @@ class WiBeee():
 
     def autodiscover(self):
         """Autodiscover WiBeee host."""
+        if self.host is None:
+            self.host = '192.168.1.150'
         found_ips = self.checkSubnetOpenPort(self.getSubnet())
         for host in found_ips:
-            _RESOURCE = 'http://{}/en/login.html'
-            resource = _RESOURCE.format(host)
+            resource = f'http://{host}/en/login.html'
             self._request = requests.Request("GET", resource).prepare()
             result = self.callurl()
             if '<title>WiBeee</title>' in result:
@@ -96,8 +102,9 @@ class WiBeee():
 
     def getStatus(self, printTxt=True):
         """Provide status."""
-        _RESOURCE = 'http://{}/en/status.xml'
-        resource = _RESOURCE.format(self.host)
+        if self.host is None:
+            self.autodiscover()
+        resource = f'http://{self.host}/en/status.xml'
         self._request = requests.Request("GET", resource).prepare()
         result = self.callurl()
         if result:
@@ -124,6 +131,8 @@ class WiBeee():
                     self._request, timeout=self._timeout
                 )
             result = response.text
+        except requests.exceptions.Timeout:
+            result = 'Error: Timeout'
         except requests.exceptions.ConnectionError:
             result = 'Error: ConnectionError'
         except requests.exceptions.RequestException:
@@ -134,13 +143,16 @@ class WiBeee():
 
     def getInfo(self):
         """Get all info."""
+        if self.host is None:
+            self.autodiscover()
         if not self.model:
             self.getModel(printTxt=False)
+            self.getModelDescription()
         if not self.version:
             self.getVersion(printTxt=False)
-        if self.host == '192.168.1.150':
-            self.autodiscover()
         result = self.outputJsonParam('model', self.model)
+        result = self.outputJsonParam('model_description',
+                                      self.modelDescription, result)
         result = self.outputJsonParam('webversion', self.version, result)
         result = self.outputJsonParam('host', self.host, result)
         return result
@@ -148,12 +160,13 @@ class WiBeee():
     def outputJsonParam(self, parameter, value, oldData=None):
         """Provide output JSON parameter and value."""
         if not oldData:
-            root = jxmlease.parse('<response></response>')
+            root = xmltodict.parse('<response></response>')
         else:
-            root = oldData
-        node = jxmlease.XMLCDATANode(value)
-        root['response'].add_node(tag=parameter, new_node=node)
-        return root
+            root = json.loads(oldData)
+        if root['response'] is None:
+            root['response'] = {}
+        root['response'][parameter] = value
+        return json.dumps(root)
 
     def outputStatus(self):
         """Provide output."""
@@ -164,25 +177,36 @@ class WiBeee():
             result = self.data
         elif self.outformat == 'json':
             try:
-                root = jxmlease.parse(self.data)
+                root = xmltodict.parse(self.data)
             except Exception:
+                root = xmltodict.parse('<response></response>')
+                root['response'] = {}
+                root['response']['model'] = 'ERROR'
+                root['response']['model_description'] = 'ERROR'
+                root['response']['webversion'] = 'ERROR'
+                self.timedata = self.getTimeData()
+                root['response']['time'] = self.timedata
+                result = json.dumps(root)
                 return result
             if 'model' not in self.data:
                 self.getModel(printTxt=False)
-                node = jxmlease.XMLCDATANode(self.model)
-                root['response'].add_node(tag="model", new_node=node)
+                root['response']['model'] = self.model
+            else:
+                self.model = root['response']['model']
+            if 'model_description' not in self.data:
+                self.getModelDescription()
+                root['response']['model_description'] = self.modelDescription
             if 'webversion' not in self.data:
                 self.getVersion(printTxt=False)
-                node = jxmlease.XMLCDATANode(self.version)
-                root['response'].add_node(tag="webversion", new_node=node)
+                root['response']['webversion'] = self.version
             if 'time' not in self.data:
                 self.timedata = self.getTimeData()
-                node = jxmlease.XMLCDATANode(self.timedata)
-                root['response'].add_node(tag="time", new_node=node)
-            result = root
+                root['response']['time'] = self.timedata
+            result = json.dumps(root)
         elif self.outformat == 'file':
             if not self.model:
                 self.getModel(printTxt=False)
+                self.getModelDescription()
             if not self.version:
                 self.getVersion(printTxt=False)
             filename = 'status_' + self.model + '_' + self.version + '.xml'
@@ -214,17 +238,23 @@ class WiBeee():
 
     def getModel(self, printTxt=True):
         """Provide model."""
+        if self.host is None:
+            self.autodiscover()
         result = 'ERROR'
         self.model = self.getParameterXML('model')
         if not self.model:
             self.model = self.getModelWeb()
+        if self.modelDescription is None:
+            self.getModelDescription()
         if printTxt:
             if self.outformat == 'json':
                 result = self.outputJsonParam('model', self.model)
+                result = self.outputJsonParam('model_description',
+                                      self.modelDescription, result)
             elif self.outformat == 'plain':
-                result = self.model
+                result = self.model + ' ' + self.modelDescription
             elif self.outformat == 'xml':
-                result = '<model>' + self.version + '</model>'
+                result = '<model>' + self.model + '</model>'
             elif self.outformat == 'file':
                 if not self.version:
                     self.getVersion(printTxt=False)
@@ -239,13 +269,12 @@ class WiBeee():
         """Provide model from web."""
         model = 'ERROR'
         data = ''
-        _RESOURCE = 'http://{}/en/loginRedirect.html?user=user&pwd=user'
-        resource = _RESOURCE.format(self.host)
+        resource = (f'http://{self.host}/en/loginRedirect.html'
+                    + '?user=user&pwd=user')
         self._request = requests.Request("GET", resource).prepare()
         result = self.callurl()
         if result:
-            _RESOURCE = 'http://{}/en/index.html'
-            resource = _RESOURCE.format(self.host)
+            resource = f'http://{self.host}/en/index.html'
             self._request = requests.Request("GET", resource).prepare()
             result = self.callurl()
             if result:
@@ -256,6 +285,35 @@ class WiBeee():
                 end = data.find('"', start+len(searchmodeltxt))
                 model = data[start+len(searchmodeltxt):end]
         return model
+
+    def getModelDescription(self):
+        """Provide model description from model."""
+        if self.model == 'WBM':
+            self.modelDescription = 'Wibeee 1Ph'
+        elif self.model == 'WBT':
+            self.modelDescription = 'Wibeee 3Ph'
+        elif self.model == 'WMX':
+            self.modelDescription = 'Wibeee MAX'
+        elif self.model == 'WTD':
+            self.modelDescription = 'Wibeee 3Ph RN'
+        elif self.model == 'WX2':
+            self.modelDescription = 'Wibeee MAX 2S'
+        elif self.model == 'WX3':
+            self.modelDescription = 'Wibeee MAX 3S'
+        elif self.model == 'WXX':
+            self.modelDescription = 'Wibeee MAX MS'
+        elif self.model == 'WBB':
+            self.modelDescription = 'Wibeee BOX'
+        elif self.model == 'WB3':
+            self.modelDescription = 'Wibeee BOX S3P'
+        elif self.model == 'W3P':
+            self.modelDescription = 'Wibeee 3Ph 3W'
+        elif self.model == 'WGD':
+            self.modelDescription = 'Wibeee GND'
+        elif self.model == 'WBP':
+            self.modelDescription = 'Wibeee SMART PLUG'
+        else:
+            self.modelDescription = 'Unknown'
 
     def getTimeData(self):
         """Provide now time."""
@@ -285,6 +343,7 @@ class WiBeee():
             elif self.outformat == 'file':
                 if not self.model:
                     self.getModel(printTxt=False)
+                    self.getModelDescription()
                 filename = self.model + '_' + self.version + '.xml'
                 f = open(filename, 'w')
                 f.write(self.version)
@@ -318,8 +377,7 @@ class WiBeee():
         """Provide reboot from web."""
         result = None
         self.actionName = 'rebootWeb'
-        _RESOURCE = 'http://{}/config_value?reboot=1'
-        resource = _RESOURCE.format(self.host)
+        resource = f'http://{self.host}/config_value?reboot=1'
         self._request = requests.Request("GET", resource).prepare()
         result = self.callurl()
         if len(result) == 0:
@@ -332,8 +390,7 @@ class WiBeee():
         """Provide reset energy from web."""
         result = None
         self.actionName = 'resetEnergy'
-        _RESOURCE = 'http://{}/resetEnergy?resetEn=1'
-        resource = _RESOURCE.format(self.host)
+        resource = f'http://{self.host}/resetEnergy?resetEn=1'
         self._request = requests.Request("GET", resource).prepare()
         result = self.callurl()
         if result:
@@ -467,9 +524,9 @@ class WiBeee():
         if self.outformat == 'plain':
             result = sensorTypes
         elif self.outformat == 'json':
-            result = json.dumps(sensorTypes, indent=4)
+            result = json.dumps(sensorTypes)
         elif self.outformat == 'xml':
-            result = jxmlease.emit_xml(sensorTypes)
+            result = sensorTypes
         elif self.outformat == 'file':
             filename = 'sensorTypes.txt'
             f = open(filename, 'w')
@@ -539,7 +596,7 @@ def program(args, printdata=True):
     if args.host:
         host = (args.host)[0]
     else:
-        host = '192.168.1.150'
+        host = None
     if args.settimeout:
         timeout = args.settimeout[0]
     else:

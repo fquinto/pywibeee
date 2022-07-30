@@ -4,7 +4,7 @@ fabric2==2.6.0
 Fabric3==1.14.post1
 fastapi==0.66.0
 fastapi-utils==0.2.1
-PyJWT==2.1.0
+PyJWT==2.4.0
 uvicorn==0.15.0
 passlib[bcrypt]==1.7.4
 pycryptodome==3.10.1

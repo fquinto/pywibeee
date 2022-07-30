@@ -1,0 +1,41 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools", "wheel"]
+
+[project]
+name = "pywibeee"
+dynamic = ["version", "readme"]
+description = "Command line interface (CLI) for WiBeee (old Mirubee) meter"
+authors = [{ name = "fquinto", email = "fran.quinto@gmail.com" }]
+license = { file = "LICENSE" }
+classifiers = [
+    "License :: OSI Approved :: GNU General Public License v2 (GPLv2)",
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Topic :: Home Automation",
+    "Topic :: System :: Monitoring",
+    "Topic :: System :: Shells",
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "Intended Audience :: Developers",
+]
+keywords = ["homeautomation", "cli", "interface", "wibeee", "mirubeee",
+              "energy meter", "smart meter", "hass"]
+dependencies = [
+    "xmltodict >= 0.13.0",
+    "requests",
+    "aiohttp",
+    "httpx",
+]
+requires-python = ">=3.7"
+
+[project.urls]
+Homepage = "https://github.com/fquinto/pywibeee"
+
+[tool.setuptools.dynamic]
+version = {attr = "pywibeee.__version__"}
+readme = {file = ["README.md"]}
+
+[project.scripts]
+pywibeee = "pywibeee.main:main"

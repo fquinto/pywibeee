@@ -13,6 +13,7 @@ Command line interface (CLI) for WiBeee (old Mirubee) meter.
 - Action: reset energy counter
 - Action: reboot of the meter (via web or via special command)
 - Several outputs when recieve data: xml, json, file, plain text
+- 3 methods to get data: async_httpx, async_aiohttp, request
 
 ## Requirements
 
@@ -33,6 +34,8 @@ $ pywibeee -h
 
 usage: pywibeee [-h] [-version] (--host HOST | --auto) [-t SETTIMEOUT]
                 [-o {xml,json,plain,file}]
+                [-p {80}]
+                [-m {async_httpx,async_aiohttp,request}]
                 (-a {reboot,rebootweb,resetenergy} | -g {model,version,status,info,sensors})
 
 CLI for WiBeee (old Mirubee) meter
@@ -50,6 +53,11 @@ optional arguments:
                         reboot|rebootweb|resetenergy
   -g {model,version,status,info,sensors}, --get {model,version,status,info,sensors}
                         model|version|status|info|sensors
+  -p {portnumber}, --port {portnumber}
+                        port number of the meter (default 80)
+  -m {async_httpx, async_aiohttp, request}, --method {async_httpx, async_aiohttp, request}
+                        async_httpx|async_aiohttp|request
+                        (default async_httpx)
 
 Enjoy! :)
 ```
@@ -110,14 +118,13 @@ $ pywibeee --host 192.168.1.150 --get status
 
 ## Last firmware
 
-- Last (11/09/2019) OTA firmware file url: https://app.mirubee.com/api/fw/wbb/FOTAFile_V3.4.614_WBB.bin
-    - MD5: 57d8c4a3c77e510fe0ae6ff44cdb7afc
+- We have a folder with firmware on it: [firmware](firmware/) and a [firmware finder downloader](firmware/download_check.py)
 
 ## Open ports
 
-80/tcp  open  http      Microchip Libraries of Applications TCP/IP Stack httpd
-502/tcp open  modbus    Modbus TCP
-550/tcp open  new-rwho?
+ - 80/tcp  open  http      Microchip Libraries of Applications TCP/IP Stack httpd
+ - 502/tcp open  modbus    Modbus TCP
+ - 550/tcp open  new-rwho?
 
 # Models description WiBeee
 
@@ -150,8 +157,7 @@ $ python setup.py install
 
 # Changelog
 
-- 0.0.1 First draft functional version.
-- 0.0.2 Improve json output. Remove dependency jxmlease. New dependency xmltodict. Added model description.
+- See file CHANGELOG.md: [CHANGELOG.md](CHANGELOG.md)
 
 # Future development
 
@@ -160,7 +166,6 @@ $ python setup.py install
 # Development CLI for Python references
 
 - https://realpython.com/command-line-interfaces-python-argparse/
-
 
 - `pip3 install --user pipenv`
 - `pipenv install requests`

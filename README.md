@@ -98,9 +98,26 @@ $ pywibeee --host 192.168.1.150 --get status
     - Basic: `user / user`
     - Admin: `admin / Sm1l1cs?`
     - Admin another: `admin / Wib333?`
-- OTA comands: WbStartBootloaderProccess, WbFinishBootloaderProccess
+- MAC Address: 00:1E:C0 (Microchip Technology)
+
+## OTA comands
+
+  - 21001A 576246696E697368426F6F746C6F6164657250726F6363657373 0D0A (hex) = `WbStartBootloaderProccess` = CHANGE_PORT_COMMAND_INIT
+  - 200119 576246696e697368426f6f746c6f6164657250726f6363657373 0D0A (hex) = `WbFinishBootloaderProccess` = CHANGE_PORT_COMMAND_FINAL
+  - 0D (hex) = Enter key = get version
+  - 0F (hex) = read Backup Position
+  - 01 (hex) = reset
+
+## Last firmware
+
 - Last (11/09/2019) OTA firmware file url: https://app.mirubee.com/api/fw/wbb/FOTAFile_V3.4.614_WBB.bin
     - MD5: 57d8c4a3c77e510fe0ae6ff44cdb7afc
+
+## Open ports
+
+80/tcp  open  http      Microchip Libraries of Applications TCP/IP Stack httpd
+502/tcp open  modbus    Modbus TCP
+550/tcp open  new-rwho?
 
 # Models description WiBeee
 

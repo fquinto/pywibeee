@@ -120,6 +120,13 @@ $ pywibeee --host 192.168.1.150 --get status
 
 - We have a folder with firmware on it: [firmware](firmware/) and a [firmware finder downloader](firmware/download_check.py)
 
+### Tools for firmware and App investigation
+
+- Emulator of WiBeee product: [emulator](emulator/)
+- Cloud server for WiBeee called webserver: [webserver](webserver/)
+
+With this tools you can "play" with the firmware and the app.
+
 ### Open ports
 
 ```

@@ -3,7 +3,7 @@
 
 """Command line interface (CLI) for WiBeee (old Mirubee) meter."""
 
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 
 import argparse
 import requests
@@ -19,10 +19,11 @@ from multiprocessing import Process, Queue
 class WiBeee():
     """WiBeee class."""
 
-    def __init__(self, host=None, timeout=10):
+    def __init__(self, host=None, port=80, timeout=10):
         """First init class."""
         self.host = host
         self._request = None
+        self._port = port
         self._timeout = timeout
         self.data = None
         self.cmdport = 550
@@ -52,7 +53,7 @@ class WiBeee():
         subnetstr = '.'.join(subnet)
         return subnetstr
 
-    def check_server(self, address, queue, port=80):
+    def check_server(self, address, queue, port):
         """Check an IP and port for it to be open, store result in queue."""
         # Create a TCP socket
         s = socket.socket()
@@ -63,10 +64,11 @@ class WiBeee():
         except socket.error:
             queue.put((False, address, port))
 
-    def checkSubnetOpenPort(self, subnet, port=80):
+    def checkSubnetOpenPort(self, subnet):
         """Check subnet for open port IPs."""
         q = Queue()
         processes = []
+        port = self._port
         for i in range(1, 255):
             ip = subnet + '.' + str(i)
             p = Process(target=self.check_server, args=[ip, q, port])
@@ -92,7 +94,7 @@ class WiBeee():
             self.host = '192.168.1.150'
         found_ips = self.checkSubnetOpenPort(self.getSubnet())
         for host in found_ips:
-            resource = f'http://{host}/en/login.html'
+            resource = f'http://{host}:{self._port}/en/login.html'
             self._request = requests.Request("GET", resource).prepare()
             result = self.callurl()
             if '<title>WiBeee</title>' in result:
@@ -104,7 +106,7 @@ class WiBeee():
         """Provide status."""
         if self.host is None:
             self.autodiscover()
-        resource = f'http://{self.host}/en/status.xml'
+        resource = f'http://{self.host}:{self._port}/en/status.xml'
         self._request = requests.Request("GET", resource).prepare()
         result = self.callurl()
         if result:
@@ -113,6 +115,10 @@ class WiBeee():
             self.data = 'ERROR'
         if printTxt:
             return self.outputStatus()
+
+    def setPort(self, port):
+        """Set port value."""
+        self._port = port
 
     def setTimeout(self, timeout):
         """Set timeout value."""
@@ -269,12 +275,12 @@ class WiBeee():
         """Provide model from web."""
         model = 'ERROR'
         data = ''
-        resource = (f'http://{self.host}/en/loginRedirect.html'
+        resource = (f'http://{self.host}:{self._port}/en/loginRedirect.html'
                     + '?user=user&pwd=user')
         self._request = requests.Request("GET", resource).prepare()
         result = self.callurl()
         if result:
-            resource = f'http://{self.host}/en/index.html'
+            resource = f'http://{self.host}:{self._port}/en/index.html'
             self._request = requests.Request("GET", resource).prepare()
             result = self.callurl()
             if result:
@@ -377,7 +383,7 @@ class WiBeee():
         """Provide reboot from web."""
         result = None
         self.actionName = 'rebootWeb'
-        resource = f'http://{self.host}/config_value?reboot=1'
+        resource = f'http://{self.host}:{self._port}/config_value?reboot=1'
         self._request = requests.Request("GET", resource).prepare()
         result = self.callurl()
         if len(result) == 0:
@@ -390,7 +396,7 @@ class WiBeee():
         """Provide reset energy from web."""
         result = None
         self.actionName = 'resetEnergy'
-        resource = f'http://{self.host}/resetEnergy?resetEn=1'
+        resource = f'http://{self.host}:{self._port}/resetEnergy?resetEn=1'
         self._request = requests.Request("GET", resource).prepare()
         result = self.callurl()
         if result:
@@ -572,6 +578,9 @@ def parsing_args(arguments):
     host_group.add_argument('--auto',
                             action='store_true',
                             help='Autodiscover host function, look IP on net.')
+    parser.add_argument('-p', '--port', action='store', type=int,
+                        nargs=1,
+                        help='set port (default 80)')
     parser.add_argument('-t', '--settimeout', action='store', type=int,
                         nargs=1,
                         help='set timeout in seconds (default 10)')
@@ -597,11 +606,15 @@ def program(args, printdata=True):
         host = (args.host)[0]
     else:
         host = None
+    if args.port:
+        port = args.port[0]
+    else:
+        port = 80
     if args.settimeout:
         timeout = args.settimeout[0]
     else:
         timeout = 10
-    c = WiBeee(host, timeout)
+    c = WiBeee(host, port, timeout)
     frm = args.output
     if frm:
         if isinstance(frm, list):

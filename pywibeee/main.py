@@ -3,7 +3,7 @@
 
 """Command line interface (CLI) for WiBeee (old Mirubee) meter."""
 
-__version__ = "0.0.4"
+__version__ = "0.0.5"
 
 import argparse
 import requests
@@ -15,13 +15,14 @@ import xmltodict
 import json
 import aiohttp
 import asyncio
+import httpx
 from multiprocessing import Process, Queue
 
 
 class WiBeee():
     """WiBeee class."""
 
-    def __init__(self, host=None, port=80, timeout=10.0, ucm='async'):
+    def __init__(self, host=None, port=80, timeout=10.0, ucm='async_httpx'):
         """First init class."""
         self.host = host
         # Default host: 192.168.1.150
@@ -37,10 +38,12 @@ class WiBeee():
         self.outformat = 'json'
         self.timedata = None
         self.actionName = None
-        if ucm == 'async':
+        if 'async' in ucm:
             self._useAsync = True
+            self._asynctype = ucm
         else:
             self._useAsync = False
+            self._asynctype = None
 
     def getIp(self):
         """Get own IP."""
@@ -67,7 +70,6 @@ class WiBeee():
         s = socket.socket()
         try:
             s.connect((address, port))
-            # print("Connection open to %s on port %s" % (address, port))
             queue.put((True, address, port))
         except socket.error:
             queue.put((False, address, port))
@@ -76,10 +78,11 @@ class WiBeee():
         """Check subnet for open port IPs."""
         q = Queue()
         processes = []
-        port = self._port
+        port1 = self._port
         for i in range(1, 255):
-            ip = subnet + '.' + str(i)
-            p = Process(target=self.check_server, args=[ip, q, port])
+            ip = f'{subnet}.{i}'
+            # print(f'checking ip:{ip} port:{port1}')
+            p = Process(target=self.check_server, args=[ip, q, port1])
             processes.append(p)
             p.start()
         found_ips = []
@@ -99,6 +102,7 @@ class WiBeee():
     def autodiscover(self):
         """Autodiscover WiBeee host."""
         found = False
+        print(f'host autodiscover:{self.host}')
         found_ips = self.checkSubnetOpenPort(self.getSubnet())
         for host in found_ips:
             resource = f'http://{host}:{self._port}/en/login.html'
@@ -113,18 +117,25 @@ class WiBeee():
     async def autodiscoverAsync(self):
         """Autodiscover async WiBeee host."""
         found = False
+        print(f'host autodiscoverAsync:{self.host}')
         found_ips = self.checkSubnetOpenPort(self.getSubnet())
         if self.session is None:
-            self.session = aiohttp.ClientSession()
+            if self._asynctype == 'async_aiohttp':
+                self.session = aiohttp.ClientSession()
+            elif self._asynctype == 'async_httpx':
+                self.session = httpx.AsyncClient()
+            else:
+                return found
         for host in found_ips:
             resource = f'http://{host}:{self._port}/en/login.html'
-            async with self.session.get(resource) as resp:
-                result = await resp.text()
+            async with self.session as resp:
+                r = await resp.get(resource)
+                result = r.text
                 if '<title>WiBeee</title>' in result:
                     self.host = host
                     found = True
                     break
-        await self.session.close()
+        # await self.session.close()
         return found
 
     def getStatus(self, printTxt=True):
@@ -147,7 +158,7 @@ class WiBeee():
         """Provide async status."""
         self.data = 'ERROR'
         if self.host is None:
-            foundhost = self.autodiscoverAsync()
+            foundhost = await self.autodiscoverAsync()
         else:
             foundhost = True
         if foundhost:
@@ -160,20 +171,40 @@ class WiBeee():
             #             print(await resp.text())
 
             if self.session is None:
-                self.session = aiohttp.ClientSession()
-            async with self.session.get(resource) as resp:
-                self.data = await resp.text()
-            await self.session.close()
+                if self._asynctype == 'async_aiohttp':
+                    self.session = aiohttp.ClientSession()
+                elif self._asynctype == 'async_httpx':
+                    self.session = httpx.AsyncClient()
+                else:
+                    result = 'ERROR'
+                    return result
+            # async with self.session.get(resource) as resp:
+            async with self.session as resp:
+                r = await resp.get(resource)
+                self.data = r.text
+            # await self.session.close()
             if printTxt:
                 return self.outputStatus()
 
-    def asyncCall(self, calling, printTxt=True):
+    def get_or_create_eventloop(self):
+        try:
+            return asyncio.get_event_loop()
+        except RuntimeError as ex:
+            if "There is no current event loop in thread" in str(ex):
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                return asyncio.get_event_loop()
+
+    def asyncCall(self, calling, asynctype='async_httpx', printTxt=True):
         """Provide async call."""
+        self._asynctype = asynctype
         loop = asyncio.get_event_loop()
+        # loop = self.get_or_create_eventloop()
         if calling == 'getStatus':
             loop.run_until_complete(self.getStatusAsync(printTxt))
         elif calling == 'autodiscover':
             loop.run_until_complete(self.autodiscoverAsync())
+            # asyncio.run(self.autodiscoverAsync())
         elif calling == 'getInfo':
             loop.run_until_complete(self.getInfoAsync())
         elif calling == 'getModel':
@@ -238,7 +269,7 @@ class WiBeee():
         """Get async all info."""
         result = 'ERROR'
         if self.host is None:
-            foundhost = self.autodiscoverAsync()
+            foundhost = await self.autodiscoverAsync()
         else:
             foundhost = True
         if foundhost:
@@ -287,7 +318,7 @@ class WiBeee():
                 return result
             if 'model' not in self.data:
                 if self._useAsync:
-                    self.asyncCall('getModel', printTxt=False)
+                    self.asyncCall('getModel', self._asynctype, False)
                 else:
                     self.getModel(printTxt=False)
                 root['response']['model'] = self.model
@@ -306,7 +337,7 @@ class WiBeee():
         elif self.outformat == 'file':
             if not self.model:
                 if self._useAsync:
-                    self.asyncCall('getModel', printTxt=False)
+                    self.asyncCall('getModel', self._asynctype, False)
                 else:
                     self.getModel(printTxt=False)
                 self.getModelDescription()
@@ -373,11 +404,11 @@ class WiBeee():
                 result = 'File saved!'
             return result
 
-    def getModelAsync(self, printTxt=True):
+    async def getModelAsync(self, printTxt=True):
         """Provide async model."""
         result = 'ERROR'
         if self.host is None:
-            foundhost = self.autodiscoverAsync()
+            foundhost = await self.autodiscoverAsync()
         else:
             foundhost = True
         if foundhost:
@@ -435,9 +466,15 @@ class WiBeee():
         resource = (f'http://{self.host}:{self._port}/en/loginRedirect.html'
                     '?user=user&pwd=user')
         if self.session is None:
-            self.session = aiohttp.ClientSession()
-        async with self.session.get(resource) as resp:
-            result = await resp.text()
+            if self._asynctype == 'async_aiohttp':
+                self.session = aiohttp.ClientSession()
+            elif self._asynctype == 'async_httpx':
+                self.session = httpx.AsyncClient()
+            else:
+                return model
+        async with self.session.get as resp:
+            r = await resp.get(resource)
+            result = r.text
             if result:
                 data = str(result)
             searchmodeltxt = 'var model = "'
@@ -488,7 +525,7 @@ class WiBeee():
         if not self.version:
             resultCmd = self.doCmd(b'\x0d')
             if resultCmd:
-                if not('Error:' in resultCmd):
+                if not('Error:' in str(resultCmd)):
                     cleanversion = resultCmd[3:]
                     self.version = cleanversion.decode()
                 else:
@@ -503,7 +540,7 @@ class WiBeee():
             elif self.outformat == 'file':
                 if not self.model:
                     if self._useAsync:
-                        self.asyncCall('getModel', printTxt=False)
+                        self.asyncCall('getModel', self._asynctype, False)
                     else:
                         self.getModel(printTxt=False)
                     self.getModelDescription()
@@ -555,22 +592,27 @@ class WiBeee():
 
     async def rebootWebAsync(self):
         """Provide async reboot from web."""
-        result = 'ERROR'
         result = None
         self.actionName = 'rebootWeb'
         if self.host is None:
-            foundhost = self.autodiscoverAsync()
+            foundhost = await self.autodiscoverAsync()
         else:
             foundhost = True
         if foundhost:
             resource = f'http://{self.host}:{self._port}/config_value?reboot=1'
             if self.session is None:
-                self.session = aiohttp.ClientSession()
-            async with self.session.get(resource) as resp:
-                result = await resp.text()
+                if self._asynctype == 'async_aiohttp':
+                    self.session = aiohttp.ClientSession()
+                elif self._asynctype == 'async_httpx':
+                    self.session = httpx.AsyncClient()
+                else:
+                    return result
+            async with self.session as resp:
+                r = await resp.get(resource)
+                result = r.text
                 if len(result) == 0:
                     result = 'done'
-            await self.session.close()
+            # await self.session.close()
         return self.outputAction(result)
 
     def resetEnergy(self):
@@ -593,19 +635,23 @@ class WiBeee():
 
     async def resetEnergyAsync(self):
         """Provide async reset energy from web."""
-        result = 'ERROR'
         result = None
         self.actionName = 'resetEnergy'
         if self.host is None:
-            foundhost = self.autodiscoverAsync()
+            foundhost = await self.autodiscoverAsync()
         else:
             foundhost = True
         if foundhost:
             resource = f'http://{self.host}:{self._port}/resetEnergy?resetEn=1'
-            if self.session is None:
+            if self._asynctype == 'async_aiohttp':
                 self.session = aiohttp.ClientSession()
-            async with self.session.get(resource) as resp:
-                result = await resp.text()
+            elif self._asynctype == 'async_httpx':
+                self.session = httpx.AsyncClient()
+            else:
+                return result
+            async with self.session as resp:
+                r = await resp.get(resource)
+                result = r.text
                 if len(result) == 0:
                     result = 'done'
             await self.session.close()
@@ -618,17 +664,18 @@ class WiBeee():
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(self._timeout)
         server_address = (self.host, self.cmdport)
-        try:
-            sock.connect(server_address)
-        except socket.error as e:
-            return 'Error: ' + str(e)
-        try:
-            sock.sendall(cmd)
-            time.sleep(0.001)
-            if cmd != b'\x01':
-                result = sock.recv(16)
-        finally:
-            sock.close()
+        if self.host is not None and self.cmdport is not None:
+            try:
+                sock.connect(server_address)
+            except socket.error as e:
+                return 'Error: ' + str(e)
+            try:
+                sock.sendall(cmd)
+                time.sleep(0.001)
+                if cmd != b'\x01':
+                    result = sock.recv(16)
+            finally:
+                sock.close()
         return result
 
     def getSensors(self):
@@ -793,9 +840,9 @@ def parsing_args(arguments):
                         default='10.0')
     parser.add_argument('-m', '--urlcallmethod', action='store', type=str,
                         nargs=1,
-                        choices=['async', 'request'],
-                        help='set URL call method (default async)',
-                        default='async')
+                        choices=['async_httpx', 'async_aiohttp', 'request'],
+                        help='set URL call method (default async_httpx)',
+                        default='async_httpx')
     parser.add_argument('-o', '--output', action='store', type=str, nargs=1,
                         choices=['xml', 'json', 'plain', 'file'],
                         help='xml|json|plain|file',
@@ -819,17 +866,17 @@ def program(args, printdata=True):
     else:
         host = None
     if args.port:
-        port = args.port[0]
+        port = args.port
     else:
         port = 80
     if args.settimeout:
-        timeout = (args.settimeout[0])
+        timeout = args.settimeout
     else:
         timeout = 10.0
     if args.urlcallmethod:
-        ucm = args.settimeout[0]
+        ucm = args.urlcallmethod
     else:
-        ucm = 'async'
+        ucm = 'async_httpx'
     c = WiBeee(host, port, timeout, ucm)
     frm = args.output
     if frm:
@@ -838,26 +885,28 @@ def program(args, printdata=True):
         else:
             c.setOutputFormat(frm)
     if args.auto:
-        if ucm == 'async':
-            c.asyncCall('autodiscover')
+        if ucm == 'async_httpx':
+            c.asyncCall('autodiscover', ucm)
+        elif ucm == 'async_aiohttp':
+            c.asyncCall('autodiscover', ucm)
         else:
             c.autodiscover()
     if args.get:
         if args.get[0] == 'model':
-            if ucm == 'async':
-                result = c.asyncCall('getModel')
+            if 'async' in ucm:
+                result = c.asyncCall('getModel', ucm)
             else:
                 result = c.getModel()
         elif args.get[0] == 'version':
             result = c.getVersion()
         elif args.get[0] == 'status':
-            if ucm == 'async':
-                result = c.asyncCall('getStatus')
+            if 'async' in ucm:
+                result = c.asyncCall('getStatus', ucm)
             else:
                 result = c.getStatus()
         elif args.get[0] == 'info':
-            if ucm == 'async':
-                result = c.asyncCall('getInfo')
+            if 'async' in ucm:
+                result = c.asyncCall('getInfo', ucm)
             else:
                 result = c.getInfo()
         elif args.get[0] == 'sensors':
@@ -866,13 +915,13 @@ def program(args, printdata=True):
         if args.action[0] == 'reboot':
             result = c.reboot()
         elif args.action[0] == 'rebootweb':
-            if ucm == 'async':
-                result = c.asyncCall('rebootWeb')
+            if 'async' in ucm:
+                result = c.asyncCall('rebootWeb', ucm)
             else:
                 result = c.rebootWeb()
         elif args.action[0] == 'resetenergy':
-            if ucm == 'async':
-                result = c.asyncCall('resetEnergy')
+            if 'async' in ucm:
+                result = c.asyncCall('resetEnergy', ucm)
             else:
                 result = c.resetEnergy()
     if printdata:

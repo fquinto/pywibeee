@@ -14,7 +14,8 @@ EXCLUDE_FROM_PACKAGES = ["contrib", "docs", "tests*"]
 CURDIR = os.path.abspath(os.path.dirname(__file__))
 
 with io.open(os.path.join(CURDIR, "README.md"), "r", encoding="utf-8") as f:
-    README = f.read()
+    long_description = f.read()
+long_description += "\n\n"
 
 
 def get_version():
@@ -27,13 +28,26 @@ def get_version():
     return str(ast.literal_eval(version))
 
 
+def get_long_description():
+    """
+    Return the README and CHANGELOG.md.
+    """
+    long_description = ""
+    with open("README.md", encoding="utf8") as f:
+        long_description += f.read()
+    # long_description += "\n\n"
+    # with open(os.path.join(CURDIR, "CHANGELOG.md"), encoding="utf8") as f:
+    #     long_description += f.read()
+    return long_description
+
+
 setup(
     name="pywibeee",
     version=get_version(),
     author="fquinto",
     author_email="fran.quinto@gmail.com",
     description="Command line interface (CLI) for WiBeee (old Mirubee) meter",
-    long_description=README,
+    long_description=get_long_description(),
     long_description_content_type="text/markdown",
     url="https://github.com/fquinto/pywibeee",
     packages=find_packages(exclude=EXCLUDE_FROM_PACKAGES),
@@ -41,7 +55,6 @@ setup(
     keywords=['homeautomation', 'cli', 'interface', 'wibeee', 'mirubeee',
               'energy meter', 'smart meter', 'hass'],
     scripts=['bin/pywibeee'],
-    entry_points={"console_scripts": ["pywibeee=pywibeee.main:main"]},
     zip_safe=False,
     install_requires=DEPENDENCIES,
     test_suite="tests.test_project",

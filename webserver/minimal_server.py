@@ -280,10 +280,10 @@ async def services_values(request: Request):
                 '<variable><id>primaryDNS</id><value>8.8.8.8</value></variable>'
                 '<variable><id>secondaryDNS</id><value>8.8.4.4</value></variable>'
                 f'<variable><id>macAddr</id><value>{mac}</value></variable>'
-                '<variable><id>ssid</id><value>WIBEEE</value></variable>'
+                '<variable><id>ssid</id><value>yourwifinetwork</value></variable>'
                 '<variable><id>keyEnc</id><value>0</value></variable>'
                 '<variable><id>keyType</id><value>1</value></variable>'
-                '<variable><id>securKey</id><value>WIBEEE</value></variable>'
+                '<variable><id>securKey</id><value>12345678</value></variable>'
                 f'<variable><id>serverIp</id><value>{serverdata}</value></variable>'
                 '<variable><id>serverIpResolved</id><value></value></variable>'
                 f'<variable><id>serverPort</id><value>{portdata}</value></variable>'
@@ -387,14 +387,14 @@ async def scanresult(request: Request):
     print('scanresult.xml')
     # data = """<?xml version="1.0" encoding="UTF-8"?>
     # <response><scan>0</scan><ver>12556</ver><count>0</count><ssid>
-    # MiFibra&#x2D;93BF</ssid></response>
+    # yourwifinetwork</ssid></response>
     # """
     yomismo = (
         '<response>\n'
  	    '\t<scan>0</scan>\n'
 	    '\t<ver>12556</ver>\n'
 	    '\t<count>15</count>\n'
-	    '\t<ssid>WIBEEE&#x5F;35&#x3A;03&#x3A;92</ssid>\n\n'
+	    '\t<ssid>yourwifinetwork</ssid>\n\n'
 	    '\t<bss>\n'
 	    '\t\t<valid>1</valid>\n'
 	    '\t\t<name>0</name>\n'
@@ -417,8 +417,8 @@ async def scanresult(request: Request):
 @app.get("/scanallresults.xml")
 async def scanallresults(request: Request):
     print('scanallresults.xml')
-    red = '<response><scan>0</scan><ver>12556</ver><count>0</count><ssid>MiFibra&#x2D;93BF</ssid></response>'
-    redes = """<response><scan>0</scan><ver>12556</ver><count>15</count><ssid>WIBEEE&#x5F;35&#x3A;03&#x3A;92</ssid><bss><valid>1</valid><name>ORANGE&#x20;CASA</name><privacy>9</privacy><strength>2</strength></bss><bss><valid>1</valid><name>vodafoneBA1422</name><privacy>9</privacy><strength>2</strength></bss><bss><valid>1</valid><name>TP&#x2D;LINK&#x5F;34E9A4</name><privacy>13</privacy><strength>1</strength></bss><bss><valid>1</valid><name>Livebox6&#x2D;59DF</name><privacy>9</privacy><strength>1</strength></bss><bss><valid>1</valid><name>devolo&#x2D;105</name><privacy>9</privacy><strength>1</strength></bss><bss><valid>1</valid><name>MiFibra&#x2D;93BF</name><privacy>9</privacy><strength>4</strength></bss><bss><valid>1</valid><name>MiFibra&#x2D;907D</name><privacy>9</privacy><strength>4</strength></bss><bss><valid>1</valid><name>Wifitv</name><privacy>9</privacy><strength>3</strength></bss><bss><valid>1</valid><name>Wifitv</name><privacy>9</privacy><strength>3</strength></bss><bss><valid>1</valid><name>WIFI</name><privacy>9</privacy><strength>3</strength></bss><bss><valid>1</valid><name>WLAN&#x5F;41</name><privacy>1</privacy><strength>2</strength></bss><bss><valid>1</valid><name>MOVISTAR&#x5F;710C</name><privacy>13</privacy><strength>3</strength></bss><bss><valid>1</valid><name>MOVISTAR&#x5F;3EFB</name><privacy>9</privacy><strength>1</strength></bss><bss><valid>1</valid><name>MOVISTAR&#x5F;F6E0</name><privacy>9</privacy><strength>1</strength></bss><bss><valid>1</valid><name>vodafone97B0</name><privacy>9</privacy><strength>1</strength></bss></response>"""
+    red = '<response><scan>0</scan><ver>12556</ver><count>0</count><ssid>yourwifinetwork</ssid></response>'
+    redes = """<response><scan>0</scan><ver>12556</ver><count>15</count><ssid>WIBEEE1234</ssid><bss><valid>1</valid><name>ORANGE&#x20;CASA</name><privacy>9</privacy><strength>2</strength></bss><bss><valid>1</valid><name>vodafoneBA1422</name><privacy>9</privacy><strength>2</strength></bss><bss><valid>1</valid><name>TP&#x2D;LINK&#x5F;34E9A4</name><privacy>13</privacy><strength>1</strength></bss><bss><valid>1</valid><name>Livebox6&#x2D;59DF</name><privacy>9</privacy><strength>1</strength></bss><bss><valid>1</valid><name>devolo&#x2D;105</name><privacy>9</privacy><strength>1</strength></bss><bss><valid>1</valid><name>MiFibra&#x2D;1234</name><privacy>9</privacy><strength>4</strength></bss><bss><valid>1</valid><name>MiFibra&#x2D;6789</name><privacy>9</privacy><strength>4</strength></bss><bss><valid>1</valid><name>Wifitv</name><privacy>9</privacy><strength>3</strength></bss><bss><valid>1</valid><name>Wifitv</name><privacy>9</privacy><strength>3</strength></bss><bss><valid>1</valid><name>WIFI</name><privacy>9</privacy><strength>3</strength></bss><bss><valid>1</valid><name>WLAN&#x5F;41</name><privacy>1</privacy><strength>2</strength></bss><bss><valid>1</valid><name>MOVISTAR&#x5F;710C</name><privacy>13</privacy><strength>3</strength></bss><bss><valid>1</valid><name>MOVISTAR&#x5F;3EFB</name><privacy>9</privacy><strength>1</strength></bss><bss><valid>1</valid><name>MOVISTAR&#x5F;F6E0</name><privacy>9</privacy><strength>1</strength></bss><bss><valid>1</valid><name>vodafone97B0</name><privacy>9</privacy><strength>1</strength></bss></response>"""
     data = ('<?xml version="1.0" encoding="UTF-8"?>\n\n'
             f' {redes}')
     print(str(request.headers))

@@ -61,7 +61,7 @@
     </variable>
     <variable>
         <id>ssid</id>
-        <value>WIBEEE</value>
+        <value>yourwifinetwork</value>
     </variable>
     <variable>
         <id>keyEnc</id>
@@ -73,7 +73,7 @@
     </variable>
     <variable>
         <id>securKey</id>
-        <value>WIBEEE</value>
+        <value>12345678</value>
     </variable>
     <variable>
         <id>serverIp</id>

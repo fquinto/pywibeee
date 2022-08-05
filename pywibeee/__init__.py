@@ -2,4 +2,4 @@
 # license that can be found in the LICENSE file.
 
 name = "pywibeee"
-__version__ = "0.0.5"
+__version__ = "0.0.6"

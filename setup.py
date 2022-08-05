@@ -13,7 +13,7 @@ DEPENDENCIES = ["xmltodict", "requests", "aiohttp", "httpx"]
 EXCLUDE_FROM_PACKAGES = ["contrib", "docs", "tests*"]
 CURDIR = os.path.abspath(os.path.dirname(__file__))
 
-with io.open(os.path.join(CURDIR, "README.md"), "r", encoding="utf-8") as f:
+with io.open(os.path.join(CURDIR, "README.rst"), "r", encoding="utf-8") as f:
     long_description = f.read()
 long_description += "\n\n"
 
@@ -33,7 +33,7 @@ def get_long_description():
     Return the README and CHANGELOG.md.
     """
     long_description = ""
-    with open("README.md", encoding="utf8") as f:
+    with open("README.rst", encoding="utf8") as f:
         long_description += f.read()
     # long_description += "\n\n"
     # with open(os.path.join(CURDIR, "CHANGELOG.md"), encoding="utf8") as f:

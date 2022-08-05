@@ -35,7 +35,7 @@ Homepage = "https://github.com/fquinto/pywibeee"
 
 [tool.setuptools.dynamic]
 version = {attr = "pywibeee.__version__"}
-readme = {file = ["README.md"]}
+readme = {file = ["README.rst"]}
 
 [project.scripts]
 pywibeee = "pywibeee.main:main"

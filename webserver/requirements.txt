@@ -2,7 +2,7 @@ aiofiles==0.6.0
 aiohttp-jinja2==1.4.2
 fabric2==2.6.0
 Fabric3==1.14.post1
-fastapi==0.66.0
+fastapi==0.109.1
 fastapi-utils==0.2.1
 PyJWT==2.4.0
 uvicorn==0.15.0

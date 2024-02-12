@@ -8,4 +8,4 @@ PyJWT==2.4.0
 uvicorn==0.15.0
 passlib[bcrypt]==1.7.4
 pycryptodome==3.19.1
-python-multipart==0.0.5
+python-multipart==0.0.7

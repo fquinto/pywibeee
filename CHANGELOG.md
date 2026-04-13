@@ -10,9 +10,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 * **Full Home Assistant custom integration** — install by copying `custom_components/wibeee/` to your HA `config/` directory. No HACS required.
 * **Dual update mode**: choose between **Local Push** (default, recommended) and **Polling** during setup.
-  * **Local Push**: the WiBeee pushes sensor data to HA in real time on port 8600. Lower latency, no polling overhead.
+  * **Local Push**: the WiBeee pushes sensor data to HA's HTTP server in real time. Lower latency, no polling overhead.
   * **Polling**: HA fetches `status.xml` from the device periodically (configurable interval, default 30 s).
-* **Auto-configuration**: the integration can automatically configure the WiBeee device to push data to HA (sends the HA IP and port 8600 in hex to `/configura_server`, then resets the device).
+* **Auto-configuration**: the integration can automatically configure the WiBeee device to push data to HA (sends the HA IP and HTTP port in hex to `/configura_server`, then resets the device).
 * **DHCP auto-discovery**: devices with MAC prefix `00:1E:C0` (Circutor SA / Smilics) are detected automatically on the network.
 * **Config Flow UI** with two steps: enter device IP (or confirm discovered IP) → choose update mode.
 * **Options Flow**: switch between Local Push and Polling, change polling interval, or re-run auto-configuration at any time.
@@ -22,7 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 * **Translations** in English, Spanish, and Catalan (config flow, options flow, entity names).
 * **Entity translations** via `translation_key` and `SensorEntityDescription` — follows modern HA conventions.
 * **HA unit constants**: `UnitOfElectricPotential.VOLT`, `UnitOfPower.WATT`, `UnitOfEnergy.WATT_HOUR`, etc. instead of hardcoded strings.
-* **Push receiver**: singleton aiohttp server on port 8600, shared across multiple WiBeee entries. Parses `/Wibeee/receiverAvg`, `/Wibeee/receiver`, and `/Wibeee/receiverLeap` endpoints.
+* **Push receiver**: HTTP views registered on HA's built-in web server (no separate port). Handles `/Wibeee/receiverAvg`, `/Wibeee/receiver`, and `/Wibeee/receiverLeap` endpoints with `requires_auth = False` for unauthenticated device pushes.
 * Minimum HA version: 2024.1.0.
 
 ### Added — CLI Library (`pywibeee/`)

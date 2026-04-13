@@ -17,7 +17,7 @@
         },
         "data_description": {
           "update_mode": "**Local Push** (recommended): The device sends data to Home Assistant in real time (faster, lower latency). **Polling**: Home Assistant periodically asks the device for data (simple, no device changes needed).",
-          "auto_configure": "If enabled, the integration will automatically configure your WiBeee to send data to this Home Assistant instance (IP and port 8600). The device will restart to apply changes."
+          "auto_configure": "If enabled, the integration will automatically configure your WiBeee to send data to this Home Assistant instance (IP and HTTP port). The device will restart to apply changes."
         }
       }
     },

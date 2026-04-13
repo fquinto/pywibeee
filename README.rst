@@ -15,7 +15,7 @@ Native custom component for Home Assistant. No HACS required.
 
 Supports two update modes (user chooses during setup):
 
-* **Local Push** (default, recommended) — the WiBeee sends data to HA in real time on port 8600. Lowest latency.
+* **Local Push** (default, recommended) — the WiBeee sends data to HA's HTTP server in real time. Lowest latency.
 * **Polling** — HA periodically fetches ``status.xml`` from the device (configurable interval, default 30 s).
 
 Features
@@ -23,7 +23,7 @@ Features
 
 * Config Flow UI — add the device from the HA interface.
 * DHCP auto-discovery — devices with MAC prefix ``00:1E:C0`` are detected automatically.
-* Auto-configuration — the integration can configure the WiBeee to push data to HA (IP + port 8600).
+* Auto-configuration — the integration can configure the WiBeee to push data to HA (IP + HTTP port).
 * 24 sensor types per phase: voltage, current, active/apparent/reactive power, frequency, power factor, active energy, reactive energy, angle, THD current & voltage with harmonics.
 * Device Registry with manufacturer, model, firmware version, and link to the device web UI.
 * Options Flow — switch modes, change polling interval, or re-run auto-configuration at any time.
@@ -54,7 +54,7 @@ Requirements
 
 * Home Assistant 2024.1.0 or later.
 * WiBeee device accessible on the local network (static IP or DHCP reservation recommended).
-* For Local Push: port 8600 must not be blocked by the HA host firewall.
+* For Local Push: the WiBeee must be able to reach HA's HTTP port (8123 by default).
 
 
 CLI Library
@@ -256,8 +256,8 @@ Configure push via HTTP
 
 .. code-block:: sh
 
-   # Set the push server (port in hex: 8600 = 2198)
-   curl "http://192.168.1.150/configura_server?ipServidor=192.168.1.50&URLServidor=192.168.1.50&portServidor=2198"
+   # Set the push server (port in hex: 8123 = 1fbb for HA default port)
+   curl "http://192.168.1.150/configura_server?ipServidor=192.168.1.50&URLServidor=192.168.1.50&portServidor=1fbb"
 
    # Reset the device to apply changes
    curl "http://192.168.1.150/config_value?reset=true"

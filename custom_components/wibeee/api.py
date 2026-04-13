@@ -307,21 +307,22 @@ class WibeeeAPI:
         return False
 
     async def async_configure_push_server(
-        self, server_ip: str, server_port: int = 8600
+        self, server_ip: str, server_port: int = 8123
     ) -> bool:
         """Configure the WiBeee device to push data to a server.
 
         This tells the WiBeee to send its periodic data to the specified
-        IP and port instead of (or in addition to) the cloud server.
+        IP and port. Typically the port is HA's HTTP port (8123 by default),
+        since the push receiver is registered as an HTTP view within HA.
 
         The WiBeee firmware expects the port in hexadecimal format.
-        For example: 8600 decimal = 2198 hex, 8080 = 1f90 hex.
+        For example: 8123 decimal = 1fbb hex, 8080 = 1f90 hex.
 
         After configuring, a reset is sent so the device applies changes.
 
         Args:
             server_ip: IP address of the server to push data to.
-            server_port: Port number (decimal). Default 8600.
+            server_port: Port number (decimal). Default 8123 (HA port).
 
         Returns:
             True if configuration was applied successfully.

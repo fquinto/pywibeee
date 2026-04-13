@@ -26,7 +26,7 @@ DOMAIN = "wibeee"
 
 DEFAULT_TIMEOUT = timedelta(seconds=10)
 DEFAULT_SCAN_INTERVAL = timedelta(seconds=30)
-DEFAULT_PUSH_PORT = 8600
+DEFAULT_HA_PORT = 8123
 
 # Configuration keys
 CONF_MAC_ADDRESS = "mac_address"

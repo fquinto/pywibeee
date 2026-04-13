@@ -1,12 +1,23 @@
 """
 Local Push receiver for Wibeee energy monitors.
 
-Runs an aiohttp web server on port 8600 that receives push data from
-WiBeee devices. The device sends periodic GET requests to
-/Wibeee/receiverAvg with all sensor values as query parameters.
+Registers HTTP views within Home Assistant's built-in web server to receive
+push data from WiBeee devices. The device sends periodic GET requests to
+fixed paths:
+  - /Wibeee/receiverAvg   (average data - main endpoint)
+  - /Wibeee/receiver      (instantaneous data)
+  - /Wibeee/receiverLeap  (gradient data)
 
-This is a singleton server shared across all Wibeee config entries,
-since all devices push to the same port.
+These paths are hardcoded in the WiBeee firmware and cannot be changed.
+The device must be configured to point to the HA instance IP and port
+(typically 8123).
+
+This module uses HomeAssistantView with ``requires_auth = False`` because
+the WiBeee device has no ability to send authentication tokens.
+
+The PushReceiver is a singleton stored in ``hass.data[DOMAIN]``.  Each
+config entry registers its MAC address so incoming push data is routed
+to the correct sensor entities.
 
 Documentation: https://github.com/fquinto/pywibeee
 """
@@ -15,20 +26,21 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from urllib.parse import parse_qsl
 
-from aiohttp import web
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.helpers import singleton
+from aiohttp.web import Request, Response
+from homeassistant.components.http import HomeAssistantView
+from homeassistant.core import HomeAssistant
 
 from .const import (
-    DEFAULT_PUSH_PORT,
+    DOMAIN,
     PUSH_PARAM_TO_SENSOR,
     PUSH_PHASE_MAP,
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+# Key for the singleton PushReceiver in hass.data
+DATA_PUSH_RECEIVER = f"{DOMAIN}_push_receiver"
 
 # Type alias for push data callback
 PushDataCallback = Callable[[dict[str, dict[str, str]]], None]
@@ -38,7 +50,7 @@ class PushReceiver:
     """Manages push data listeners for registered WiBeee devices.
 
     Each device is identified by its MAC address. When push data arrives,
-    the receiver parses it and calls the registered callback.
+    the receiver parses it and calls the registered callback for that device.
     """
 
     def __init__(self) -> None:
@@ -67,12 +79,15 @@ class PushReceiver:
             len(self._listeners),
         )
 
-    def get_listener(
-        self, mac_address: str
-    ) -> PushDataCallback | None:
+    def get_listener(self, mac_address: str) -> PushDataCallback | None:
         """Get the callback for a given MAC address."""
         mac_clean = mac_address.replace(":", "").lower()
         return self._listeners.get(mac_clean)
+
+    @property
+    def device_count(self) -> int:
+        """Return the number of registered devices."""
+        return len(self._listeners)
 
 
 def parse_push_data(
@@ -107,135 +122,126 @@ def parse_push_data(
     return phases
 
 
-def create_push_app(receiver: PushReceiver) -> web.Application:
-    """Create the aiohttp web application for receiving push data.
+def _dispatch_push_data(receiver: PushReceiver, query: dict[str, str]) -> str:
+    """Dispatch push data to the correct device listener.
 
-    Handles the following WiBeee push endpoints:
-    - GET /Wibeee/receiverAvg  (main push endpoint)
-    - GET /Wibeee/receiver     (alternative)
-    - GET /Wibeee/receiverLeap (gradient data)
+    Returns a log message describing what happened.
+    """
+    mac_addr = query.get("mac", "").replace(":", "").lower()
+    if not mac_addr:
+        return "no MAC in push data"
+
+    listener = receiver.get_listener(mac_addr)
+    if listener is None:
+        return f"unregistered device {mac_addr}"
+
+    parsed = parse_push_data(query)
+    if parsed:
+        listener(parsed)
+        return (
+            f"device {mac_addr}: {len(parsed)} phases, "
+            f"{sum(len(v) for v in parsed.values())} values"
+        )
+    return f"device {mac_addr}: no recognized sensors"
+
+
+class WibeeeReceiverAvgView(HomeAssistantView):
+    """Handle /Wibeee/receiverAvg - the main push endpoint.
+
+    The WiBeee device sends averaged sensor data as GET query parameters.
+    Expected response: ``<<<WBAVG `` (the device checks this prefix).
     """
 
-    async def handle_push(request: web.Request) -> web.Response:
-        """Handle incoming push data from a WiBeee device."""
-        query = dict(parse_qsl(request.query_string))
+    url = "/Wibeee/receiverAvg"
+    name = "api:wibeee:receiver_avg"
+    requires_auth = False
 
-        mac_addr = query.get("mac", "").replace(":", "").lower()
-        if not mac_addr:
-            _LOGGER.debug(
-                "Received push data without MAC address: %s %s",
-                request.method,
-                request.path,
-            )
-            return web.Response(status=200, text="<<<WBAVG ")
+    def __init__(self, receiver: PushReceiver) -> None:
+        """Initialize with the push receiver instance."""
+        self._receiver = receiver
 
-        listener = receiver.get_listener(mac_addr)
-        if listener is None:
-            _LOGGER.debug(
-                "Received push data from unregistered device %s, ignoring",
-                mac_addr,
-            )
-            return web.Response(status=200, text="<<<WBAVG ")
-
-        # Parse the push data into phase/sensor format
-        parsed = parse_push_data(query)
-
-        if parsed:
-            _LOGGER.debug(
-                "Received push data from %s: %d phases, %d values",
-                mac_addr,
-                len(parsed),
-                sum(len(v) for v in parsed.values()),
-            )
-            listener(parsed)
-        else:
-            _LOGGER.debug(
-                "Push data from %s contained no recognized sensors",
-                mac_addr,
-            )
-
-        return web.Response(status=200, text="<<<WBAVG ")
-
-    async def handle_receiver_leap(
-        request: web.Request,
-    ) -> web.Response:
-        """Handle receiverLeap endpoint (gradient data)."""
-        # Same parsing logic - the data format is the same
-        query = dict(parse_qsl(request.query_string))
-        mac_addr = query.get("mac", "").replace(":", "").lower()
-
-        if mac_addr:
-            listener = receiver.get_listener(mac_addr)
-            if listener:
-                parsed = parse_push_data(query)
-                if parsed:
-                    listener(parsed)
-
-        return web.Response(status=200, text="<<<WGRADIENT=007 ")
-
-    async def handle_unknown(request: web.Request) -> web.Response:
-        """Handle unknown paths gracefully."""
-        _LOGGER.debug(
-            "Received unknown request: %s %s", request.method, request.path
-        )
-        return web.Response(status=200)
-
-    app = web.Application()
-    app.router.add_get("/Wibeee/receiverAvg", handle_push)
-    app.router.add_get("/Wibeee/receiver", handle_push)
-    app.router.add_get("/Wibeee/receiverLeap", handle_receiver_leap)
-    app.router.add_route("*", "/{path:.*}", handle_unknown)
-
-    return app
+    async def get(self, request: Request) -> Response:
+        """Handle incoming averaged push data from a WiBeee device."""
+        query = dict(request.query)
+        result = _dispatch_push_data(self._receiver, query)
+        _LOGGER.debug("receiverAvg: %s", result)
+        return Response(status=200, text="<<<WBAVG ")
 
 
-@singleton.singleton("wibeee_push_receiver")
-async def async_get_push_receiver(
-    hass: HomeAssistant,
-    port: int = DEFAULT_PUSH_PORT,
-) -> PushReceiver:
-    """Get or create the singleton push receiver.
+class WibeeeReceiverView(HomeAssistantView):
+    """Handle /Wibeee/receiver - instantaneous data endpoint.
 
-    The server is shared across all Wibeee config entries since all
-    devices push to the same port. Uses HA's singleton pattern.
+    Same data format as receiverAvg. Expected response: ``<<<WBAVG ``.
+    """
+
+    url = "/Wibeee/receiver"
+    name = "api:wibeee:receiver"
+    requires_auth = False
+
+    def __init__(self, receiver: PushReceiver) -> None:
+        """Initialize with the push receiver instance."""
+        self._receiver = receiver
+
+    async def get(self, request: Request) -> Response:
+        """Handle incoming instantaneous push data."""
+        query = dict(request.query)
+        result = _dispatch_push_data(self._receiver, query)
+        _LOGGER.debug("receiver: %s", result)
+        return Response(status=200, text="<<<WBAVG ")
+
+
+class WibeeeReceiverLeapView(HomeAssistantView):
+    """Handle /Wibeee/receiverLeap - gradient data endpoint.
+
+    Same data format. Expected response: ``<<<WGRADIENT=007 ``.
+    """
+
+    url = "/Wibeee/receiverLeap"
+    name = "api:wibeee:receiver_leap"
+    requires_auth = False
+
+    def __init__(self, receiver: PushReceiver) -> None:
+        """Initialize with the push receiver instance."""
+        self._receiver = receiver
+
+    async def get(self, request: Request) -> Response:
+        """Handle incoming gradient push data."""
+        query = dict(request.query)
+        result = _dispatch_push_data(self._receiver, query)
+        _LOGGER.debug("receiverLeap: %s", result)
+        return Response(status=200, text="<<<WGRADIENT=007 ")
+
+
+def async_setup_push_receiver(hass: HomeAssistant) -> PushReceiver:
+    """Set up the push receiver and register HTTP views.
+
+    Creates a singleton PushReceiver stored in ``hass.data`` and registers
+    the three WiBeee HTTP views on HA's built-in web server.
+
+    This is idempotent: calling it multiple times returns the same receiver.
 
     Args:
         hass: Home Assistant instance.
-        port: Port to listen on (default 8600).
 
     Returns:
         The PushReceiver instance.
     """
+    # Return existing receiver if already set up
+    if DATA_PUSH_RECEIVER in hass.data:
+        return hass.data[DATA_PUSH_RECEIVER]
+
     receiver = PushReceiver()
 
-    # Create the aiohttp app
-    app = create_push_app(receiver)
+    # Register the three push endpoints on HA's HTTP server
+    hass.http.register_view(WibeeeReceiverAvgView(receiver))
+    hass.http.register_view(WibeeeReceiverView(receiver))
+    hass.http.register_view(WibeeeReceiverLeapView(receiver))
 
-    # Determine the local IP to bind to
-    try:
-        from homeassistant.components.network import async_get_source_ip
-        from homeassistant.components.network.const import PUBLIC_TARGET_IP
-
-        local_ip = await async_get_source_ip(hass, target_ip=PUBLIC_TARGET_IP)
-    except Exception:
-        local_ip = "0.0.0.0"
-
-    # Start the web server
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, local_ip, port)
-    await site.start()
+    hass.data[DATA_PUSH_RECEIVER] = receiver
 
     _LOGGER.info(
-        "Wibeee push receiver listening on http://%s:%d", local_ip, port
+        "Wibeee push receiver registered on HA HTTP server "
+        "(/Wibeee/receiverAvg, /Wibeee/receiver, /Wibeee/receiverLeap)"
     )
-
-    @callback
-    def shutdown_receiver(event: Event) -> None:
-        """Shut down the push receiver on HA stop."""
-        _LOGGER.info("Shutting down Wibeee push receiver")
-        hass.async_create_task(runner.cleanup())
-
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, shutdown_receiver)
 
     return receiver

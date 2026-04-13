@@ -6,8 +6,8 @@ Wibeee energy monitor device. Supports two update modes:
 
 - **Polling mode**: Uses DataUpdateCoordinator to periodically fetch
   status.xml from the device.
-- **Local Push mode**: Receives push data from the device via the
-  PushReceiver HTTP server on port 8600. Sensors update in real time.
+- **Local Push mode**: Receives push data from the device via HTTP views
+  registered on HA's built-in web server. Sensors update in real time.
 
 Documentation: https://github.com/fquinto/pywibeee
 """
@@ -152,7 +152,7 @@ async def _setup_local_push(
     First does an initial poll to discover which sensors exist,
     then registers with the push receiver for real-time updates.
     """
-    from .push_receiver import async_get_push_receiver
+    from .push_receiver import async_setup_push_receiver
 
     # Do one initial poll to discover available sensors
     initial_data = await api.async_fetch_sensors_data(retries=3)
@@ -203,7 +203,7 @@ async def _setup_local_push(
                     if entity is not None:
                         entity.update_from_push(value)
 
-        receiver = await async_get_push_receiver(hass)
+        receiver = async_setup_push_receiver(hass)
         receiver.register_device(mac_addr, on_push_data)
 
         # Unregister on entry unload
@@ -383,7 +383,7 @@ class WibeeePollingSensor(
 class WibeeePushSensor(SensorEntity):
     """Wibeee sensor updated via Local Push from the device.
 
-    The device sends data to /Wibeee/receiverAvg on port 8600.
+    The device sends data to /Wibeee/receiverAvg on HA's HTTP server.
     Values are pushed in real time (typically every few seconds).
     """
 

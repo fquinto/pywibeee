@@ -30,7 +30,7 @@ from .const import (
     CONF_SCAN_INTERVAL,
     CONF_UPDATE_MODE,
     CONF_WIBEEE_ID,
-    DEFAULT_PUSH_PORT,
+    DEFAULT_HA_PORT,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     MODE_LOCAL_PUSH,
@@ -103,6 +103,17 @@ async def _get_local_ip(hass: HomeAssistant) -> str:
         return await async_get_source_ip(hass, target_ip=PUBLIC_TARGET_IP)
     except Exception:
         return await hass.async_add_executor_job(_get_local_ip_sync)
+
+
+def _get_ha_port(hass: HomeAssistant) -> int:
+    """Get the port Home Assistant's HTTP server is listening on.
+
+    Falls back to DEFAULT_HA_PORT (8123) if not determinable.
+    """
+    try:
+        return hass.http.server_port  # type: ignore[union-attr]
+    except (AttributeError, TypeError):
+        return DEFAULT_HA_PORT
 
 
 class WibeeeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -213,6 +224,7 @@ class WibeeeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if mode == MODE_LOCAL_PUSH and auto_configure:
                 try:
                     local_ip = await _get_local_ip(self.hass)
+                    ha_port = _get_ha_port(self.hass)
                     session = async_get_clientsession(self.hass)
                     api = WibeeeAPI(
                         session,
@@ -220,7 +232,7 @@ class WibeeeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         timeout=timedelta(seconds=5),
                     )
                     success = await api.async_configure_push_server(
-                        local_ip, DEFAULT_PUSH_PORT
+                        local_ip, ha_port
                     )
                     if not success:
                         errors["base"] = "auto_configure_failed"
@@ -228,7 +240,7 @@ class WibeeeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         _LOGGER.info(
                             "Auto-configured WiBeee to push to %s:%d",
                             local_ip,
-                            DEFAULT_PUSH_PORT,
+                            ha_port,
                         )
                 except Exception:
                     _LOGGER.exception("Failed to auto-configure WiBeee")
@@ -304,6 +316,7 @@ class WibeeeOptionsFlowHandler(config_entries.OptionsFlow):
             if new_mode == MODE_LOCAL_PUSH and auto_configure:
                 try:
                     local_ip = await _get_local_ip(self.hass)
+                    ha_port = _get_ha_port(self.hass)
                     session = async_get_clientsession(self.hass)
                     api = WibeeeAPI(
                         session,
@@ -311,7 +324,7 @@ class WibeeeOptionsFlowHandler(config_entries.OptionsFlow):
                         timeout=timedelta(seconds=5),
                     )
                     success = await api.async_configure_push_server(
-                        local_ip, DEFAULT_PUSH_PORT
+                        local_ip, ha_port
                     )
                     if not success:
                         errors["base"] = "auto_configure_failed"

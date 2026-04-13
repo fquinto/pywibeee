@@ -17,7 +17,7 @@
         },
         "data_description": {
           "update_mode": "**Local Push** (recomanat): El dispositiu envia dades a Home Assistant en temps real (m\u00e9s r\u00e0pid, menor lat\u00e8ncia). **Polling**: Home Assistant consulta peri\u00f2dicament el dispositiu (simple, no requereix canvis al dispositiu).",
-          "auto_configure": "Si s'activa, la integraci\u00f3 configurar\u00e0 autom\u00e0ticament el teu WiBeee per enviar dades a aquesta inst\u00e0ncia de Home Assistant (IP i port 8600). El dispositiu es reiniciar\u00e0 per aplicar els canvis."
+          "auto_configure": "Si s'activa, la integraci\u00f3 configurar\u00e0 autom\u00e0ticament el teu WiBeee per enviar dades a aquesta inst\u00e0ncia de Home Assistant (IP i port HTTP). El dispositiu es reiniciar\u00e0 per aplicar els canvis."
         }
       }
     },

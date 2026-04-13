@@ -17,7 +17,7 @@
         },
         "data_description": {
           "update_mode": "**Local Push** (recomendado): El dispositivo env\u00eda datos a Home Assistant en tiempo real (m\u00e1s r\u00e1pido, menor latencia). **Polling**: Home Assistant consulta peri\u00f3dicamente al dispositivo (simple, no requiere cambios en el dispositivo).",
-          "auto_configure": "Si se activa, la integraci\u00f3n configurar\u00e1 autom\u00e1ticamente tu WiBeee para que env\u00ede datos a esta instancia de Home Assistant (IP y puerto 8600). El dispositivo se reiniciar\u00e1 para aplicar los cambios."
+          "auto_configure": "Si se activa, la integraci\u00f3n configurar\u00e1 autom\u00e1ticamente tu WiBeee para que env\u00ede datos a esta instancia de Home Assistant (IP y puerto HTTP). El dispositivo se reiniciar\u00e1 para aplicar los cambios."
         }
       }
     },

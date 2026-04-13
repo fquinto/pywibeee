@@ -5,7 +5,8 @@ This integration communicates with Wibeee (formerly Mirubee) energy monitoring
 devices manufactured by Smilics/Circutor over the local network.
 
 Supports two update modes:
-- **Local Push** (default): The WiBeee pushes data to HA on port 8600.
+- **Local Push** (default): The WiBeee pushes data to HA's built-in HTTP
+  server (port 8123 by default) at ``/Wibeee/receiverAvg``.
   Can auto-configure the device to point to the HA instance.
 - **Polling**: Periodically fetches status.xml from the device.
 
@@ -50,11 +51,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = entry.data
 
-    # If local push mode, ensure the push receiver is started
+    # If local push mode, ensure the push receiver views are registered
     if mode == MODE_LOCAL_PUSH:
-        from .push_receiver import async_get_push_receiver
+        from .push_receiver import async_setup_push_receiver
 
-        await async_get_push_receiver(hass)
+        async_setup_push_receiver(hass)
 
     # Reload on options change
     entry.async_on_unload(entry.add_update_listener(async_update_options))
@@ -75,19 +76,13 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # If local push, unregister the device from the push receiver
     mode = entry.options.get(CONF_UPDATE_MODE, MODE_LOCAL_PUSH)
     if mode == MODE_LOCAL_PUSH:
-        from .push_receiver import async_get_push_receiver
+        from .push_receiver import DATA_PUSH_RECEIVER
 
         mac_addr = entry.data.get(CONF_MAC_ADDRESS, "")
         if mac_addr:
-            try:
-                receiver = await async_get_push_receiver(hass)
+            receiver = hass.data.get(DATA_PUSH_RECEIVER)
+            if receiver is not None:
                 receiver.unregister_device(mac_addr)
-            except Exception:
-                _LOGGER.debug(
-                    "Could not unregister device %s from push receiver",
-                    mac_addr,
-                    exc_info=True,
-                )
 
     unload_ok = await hass.config_entries.async_unload_platforms(
         entry, PLATFORMS

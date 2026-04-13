@@ -3,7 +3,7 @@
 
 """Command line interface (CLI) for WiBeee (old Mirubee) meter."""
 
-__version__ = "0.0.6"
+from pywibeee import __version__
 
 import argparse
 import requests
@@ -296,6 +296,14 @@ class WiBeee():
             r = loop.run_until_complete(self.rebootWebAsync())
         elif calling == 'resetEnergy':
             r = loop.run_until_complete(self.resetEnergyAsync())
+        elif calling == 'configureServer':
+            # printTxt is (server_ip, server_port) tuple in this case
+            if isinstance(printTxt, tuple):
+                server_ip, server_port = printTxt
+                r = loop.run_until_complete(
+                    self.configureServerAsync(server_ip, server_port))
+            else:
+                r = None
         return r
 
     def setPort(self, port):
@@ -592,33 +600,27 @@ class WiBeee():
             model = data[start+len(searchmodeltxt):end]
         return model
 
+    # Model code to description mapping
+    MODEL_DESCRIPTIONS = {
+        'WBM': 'Wibeee 1Ph',
+        'WBT': 'Wibeee 3Ph',
+        'WMX': 'Wibeee MAX',
+        'WTD': 'Wibeee 3Ph RN',
+        'WX2': 'Wibeee MAX 2S',
+        'WX3': 'Wibeee MAX 3S',
+        'WXX': 'Wibeee MAX MS',
+        'WBB': 'Wibeee BOX',
+        'WB3': 'Wibeee BOX S3P',
+        'W3P': 'Wibeee 3Ph 3W',
+        'WGD': 'Wibeee GND',
+        'WBP': 'Wibeee SMART PLUG',
+    }
+
     def getModelDescription(self):
         """Provide model description from model."""
-        self.modelDescription = 'Unknown'
-        if self.model == 'WBM':
-            self.modelDescription = 'Wibeee 1Ph'
-        elif self.model == 'WBT':
-            self.modelDescription = 'Wibeee 3Ph'
-        elif self.model == 'WMX':
-            self.modelDescription = 'Wibeee MAX'
-        elif self.model == 'WTD':
-            self.modelDescription = 'Wibeee 3Ph RN'
-        elif self.model == 'WX2':
-            self.modelDescription = 'Wibeee MAX 2S'
-        elif self.model == 'WX3':
-            self.modelDescription = 'Wibeee MAX 3S'
-        elif self.model == 'WXX':
-            self.modelDescription = 'Wibeee MAX MS'
-        elif self.model == 'WBB':
-            self.modelDescription = 'Wibeee BOX'
-        elif self.model == 'WB3':
-            self.modelDescription = 'Wibeee BOX S3P'
-        elif self.model == 'W3P':
-            self.modelDescription = 'Wibeee 3Ph 3W'
-        elif self.model == 'WGD':
-            self.modelDescription = 'Wibeee GND'
-        elif self.model == 'WBP':
-            self.modelDescription = 'Wibeee SMART PLUG'
+        self.modelDescription = self.MODEL_DESCRIPTIONS.get(
+            self.model, 'Unknown'
+        )
 
     def getTimeData(self):
         """Provide now time."""
@@ -772,11 +774,97 @@ class WiBeee():
                     result = r.text
             else:
                 return result
-            # async with self.session as resp:
-            #     r = await resp.get(resource)
-            #     result = r.text
             if len(result) == 0:
                 result = 'done'
+        return self.outputAction(result)
+
+    def configureServer(self, server_ip, server_port=8600):
+        """Configure the WiBeee to push data to a server.
+
+        The WiBeee firmware expects the port in hexadecimal format.
+        Example: 8600 decimal = 2198 hex, 8080 = 1f90 hex.
+
+        After configuring, sends a reset so the device applies changes.
+
+        Args:
+            server_ip: IP address of the push server.
+            server_port: Port in decimal (default 8600).
+
+        Returns:
+            Result string indicating success or failure.
+        """
+        result = 'ERROR'
+        self.actionName = 'configureServer'
+        if self.host is None:
+            foundhost = self.autodiscover()
+        else:
+            foundhost = True
+        if foundhost:
+            port_hex = format(int(server_port), '04x')
+            resource = (
+                f'http://{self.host}:{self._port}/configura_server'
+                f'?ipServidor={server_ip}'
+                f'&URLServidor={server_ip}'
+                f'&portServidor={port_hex}'
+            )
+            self._request = requests.Request("GET", resource).prepare()
+            result = self.callurl()
+            if result and 'Error' not in result:
+                # Reset the device to apply changes
+                resource = (
+                    f'http://{self.host}:{self._port}'
+                    '/config_value?reset=true'
+                )
+                self._request = requests.Request("GET", resource).prepare()
+                self.callurl()
+                result = f'done (server={server_ip}:{server_port})'
+        return self.outputAction(result)
+
+    async def configureServerAsync(self, server_ip, server_port=8600):
+        """Provide async configure server push."""
+        result = None
+        self.actionName = 'configureServer'
+        if self.host is None:
+            foundhost = await self.autodiscoverAsync()
+        else:
+            foundhost = True
+        if foundhost:
+            port_hex = format(int(server_port), '04x')
+            resource = (
+                f'http://{self.host}:{self._port}/configura_server'
+                f'?ipServidor={server_ip}'
+                f'&URLServidor={server_ip}'
+                f'&portServidor={port_hex}'
+            )
+            if self._asynctype == 'async_aiohttp':
+                self.session = aiohttp.ClientSession()
+                async with self.session.get(resource) as resp:
+                    r = await resp.text()
+                    result = r
+                await self.session.close()
+            elif self._asynctype == 'async_httpx':
+                self.session = httpx.AsyncClient()
+                async with self.session as resp:
+                    r = await resp.get(resource)
+                    result = r.text
+            else:
+                return self.outputAction(result)
+            if result is not None and 'Error' not in str(result):
+                # Reset the device to apply changes
+                reset_resource = (
+                    f'http://{self.host}:{self._port}'
+                    '/config_value?reset=true'
+                )
+                if self._asynctype == 'async_aiohttp':
+                    self.session = aiohttp.ClientSession()
+                    async with self.session.get(reset_resource) as resp:
+                        await resp.text()
+                    await self.session.close()
+                elif self._asynctype == 'async_httpx':
+                    self.session = httpx.AsyncClient()
+                    async with self.session as resp:
+                        await resp.get(reset_resource)
+                result = f'done (server={server_ip}:{server_port})'
         return self.outputAction(result)
 
     def doCmd(self, cmd):
@@ -800,6 +888,38 @@ class WiBeee():
                 sock.close()
         return result
 
+    # Sensor type definitions: xml_key -> [display_name, unit, mdi_icon]
+    SENSOR_DEFINITIONS = {
+        'vrms': ['Vrms', 'V', 'mdi:sine-wave'],
+        'irms': ['Irms', 'A', 'mdi:flash-auto'],
+        'p_aparent': ['Apparent Power', 'VA', 'mdi:flash-circle'],
+        'p_activa': ['Active Power', 'W', 'mdi:flash'],
+        'p_reactiva_ind': ['Inductive Reactive Power', 'var',
+                           'mdi:flash-outline'],
+        'p_reactiva_cap': ['Capacitive Reactive Power', 'var',
+                           'mdi:flash-outline'],
+        'frecuencia': ['Frequency', 'Hz', 'mdi:current-ac'],
+        'factor_potencia': ['Power Factor', ' ', 'mdi:math-cos'],
+        'energia_activa': ['Active Energy', 'Wh', 'mdi:pulse'],
+        'energia_reactiva_ind': ['Inductive Reactive Energy', 'varh',
+                                 'mdi:alpha-e-circle-outline'],
+        'energia_reactiva_cap': ['Capacitive Reactive Energy', 'varh',
+                                 'mdi:alpha-e-circle-outline'],
+        'angle': ['Angle', '\u00b0', 'mdi:angle-acute'],
+        'thd_total': ['THD Current', '%', 'mdi:chart-bubble'],
+        'thd_fund': ['THD Current (fundamental)', 'A', 'mdi:vector-point'],
+        'thd_ar3': ['THD Current Harmonic 3', 'A', 'mdi:numeric-3'],
+        'thd_ar5': ['THD Current Harmonic 5', 'A', 'mdi:numeric-5'],
+        'thd_ar7': ['THD Current Harmonic 7', 'A', 'mdi:numeric-7'],
+        'thd_ar9': ['THD Current Harmonic 9', 'A', 'mdi:numeric-9'],
+        'thd_tot_V': ['THD Voltage', '%', 'mdi:chart-bubble'],
+        'thd_fun_V': ['THD Voltage (fundamental)', 'V', 'mdi:vector-point'],
+        'thd_ar3_V': ['THD Voltage Harmonic 3', 'V', 'mdi:numeric-3'],
+        'thd_ar5_V': ['THD Voltage Harmonic 5', 'V', 'mdi:numeric-5'],
+        'thd_ar7_V': ['THD Voltage Harmonic 7', 'V', 'mdi:numeric-7'],
+        'thd_ar9_V': ['THD Voltage Harmonic 9', 'V', 'mdi:numeric-9'],
+    }
+
     def getSensors(self):
         """Provide sensors list from XML."""
         result = 'ERROR'
@@ -815,92 +935,8 @@ class WiBeee():
         for item in xml:
             if item.tag[:4] == 'fase':
                 name = item.tag[6:]
-                if name not in sensorTypes:
-                    if name == 'vrms':
-                        sensorTypes[name] = ['Vrms', 'V', 'mdi:power-plug']
-                    elif name == 'irms':
-                        sensorTypes[name] = ['Irms', 'A', 'mdi:flash-auto']
-                    elif name == 'p_aparent':
-                        sensorTypes[name] = ['Apparent Power', 'VA',
-                                             'mdi:flash-circle']
-                    elif name == 'p_activa':
-                        sensorTypes[name] = ['Active Power', 'W', 'mdi:flash']
-                    elif name == 'p_reactiva_ind':
-                        sensorTypes[name] = ['Inductive Reactive Power',
-                                             'VArL', 'mdi:flash-outline']
-                    elif name == 'p_reactiva_cap':
-                        sensorTypes[name] = ['Capacitive Reactive Power',
-                                             'VArC', 'mdi:flash-outline']
-                    elif name == 'frecuencia':
-                        sensorTypes[name] = ['Frequency', 'Hz',
-                                             'mdi:current-ac']
-                    elif name == 'factor_potencia':
-                        sensorTypes[name] = ['Power Factor', ' ',
-                                             'mdi:math-cos']
-                    elif name == 'energia_activa':
-                        sensorTypes[name] = ['Active Energy',
-                                             'Wh', 'mdi:pulse']
-                    elif name == 'energia_reactiva_ind':
-                        sensorTypes[name] = ['Inductive Reactive Energy',
-                                             'VArLh',
-                                             'mdi:alpha-e-circle-outline']
-                    elif name == 'energia_reactiva_cap':
-                        sensorTypes[name] = ['Capacitive Reactive Energy',
-                                             'VArCh',
-                                             'mdi:alpha-e-circle-outline']
-                    elif name == 'angle':
-                        sensorTypes[name] = ['Angle',
-                                             '°',
-                                             'mdi:angle-acute']
-                    elif name == 'thd_total':
-                        # Total Harmonic Distortion = THD
-                        sensorTypes[name] = ['THD Current',
-                                             '%',
-                                             'mdi:chart-bubble']
-                    elif name == 'thd_fund':
-                        sensorTypes[name] = ['THD Current (fundamental)',
-                                             'A',
-                                             'mdi:vector-point']
-                    elif name == 'thd_ar3':
-                        sensorTypes[name] = ['THD Current Harmonic 3',
-                                             'A',
-                                             'mdi:numeric-3']
-                    elif name == 'thd_ar5':
-                        sensorTypes[name] = ['THD Current Harmonic 5',
-                                             'A',
-                                             'mdi:numeric-5']
-                    elif name == 'thd_ar7':
-                        sensorTypes[name] = ['THD Current Harmonic 7',
-                                             'A',
-                                             'mdi:numeric-7']
-                    elif name == 'thd_ar9':
-                        sensorTypes[name] = ['THD Current Harmonic 9',
-                                             'A',
-                                             'mdi:numeric-9']
-                    elif name == 'thd_tot_V':
-                        sensorTypes[name] = ['THD Voltage',
-                                             '%',
-                                             'mdi:chart-bubble']
-                    elif name == 'thd_fun_V':
-                        sensorTypes[name] = ['THD Voltage (fundamental)',
-                                             'V',
-                                             'mdi:vector-point']
-                    elif name == 'thd_ar3_V':
-                        sensorTypes[name] = ['THD Voltage Harmonic 3',
-                                             'V',
-                                             'mdi:numeric-3']
-                    elif name == 'thd_ar5_V':
-                        sensorTypes[name] = ['THD Voltage Harmonic 5',
-                                             'V',
-                                             'mdi:numeric-5']
-                    elif name == 'thd_ar7_V':
-                        sensorTypes[name] = ['THD Voltage Harmonic 7',
-                                             'V',
-                                             'mdi:numeric-7']
-                    elif name == 'thd_ar9_V':
-                        sensorTypes[name] = ['THD Voltage Harmonic 9',
-                                             'V',
-                                             'mdi:numeric-9']
+                if name not in sensorTypes and name in self.SENSOR_DEFINITIONS:
+                    sensorTypes[name] = self.SENSOR_DEFINITIONS[name]
         if self.outformat == 'plain':
             result = sensorTypes
         elif self.outformat == 'json':
@@ -910,7 +946,7 @@ class WiBeee():
         elif self.outformat == 'file':
             filename = 'sensorTypes.txt'
             f = open(filename, 'w')
-            f.write(sensorTypes)
+            f.write(json.dumps(sensorTypes))
             f.close()
             result = 'File saved!'
         return result
@@ -970,12 +1006,20 @@ def parsing_args(arguments):
                         help='xml|json|plain|file',
                         default='json')
     my_group.add_argument('-a', '--action', action='store', type=str, nargs=1,
-                          choices=['reboot', 'rebootweb', 'resetenergy'],
-                          help='reboot|rebootweb|resetenergy')
+                          choices=['reboot', 'rebootweb', 'resetenergy',
+                                   'configureserver'],
+                          help='reboot|rebootweb|resetenergy|configureserver')
     my_group.add_argument('-g', '--get', action='store', type=str, nargs=1,
                           choices=['model', 'version', 'status',
                                    'info', 'sensors', 'devicename'],
                           help='model|version|status|info|sensors|devicename')
+    parser.add_argument('--serverip', action='store', type=str, nargs=1,
+                        help='Server IP for push config (use with '
+                             '-a configureserver)',
+                        default=None)
+    parser.add_argument('--serverport', action='store', type=int, nargs=1,
+                        help='Server port for push config (default 8600)',
+                        default=[8600])
     args = parser.parse_args(arguments)
     return args
 
@@ -1051,6 +1095,14 @@ def program(args, printdata=True):
                 result = c.asyncCall('resetEnergy', ucm)
             else:
                 result = c.resetEnergy()
+        elif args.action[0] == 'configureserver':
+            server_ip = args.serverip[0] if args.serverip else c.getIp()
+            server_port = args.serverport[0] if args.serverport else 8600
+            if 'async' in ucm:
+                result = c.asyncCall(
+                    'configureServer', ucm, (server_ip, server_port))
+            else:
+                result = c.configureServer(server_ip, server_port)
     if printdata:
         print(result)
     else:

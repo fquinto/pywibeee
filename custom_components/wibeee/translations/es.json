@@ -1,0 +1,80 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Agregar dispositivo Wibeee",
+        "description": "Introduce la direcci\u00f3n IP de tu monitor de energ\u00eda Wibeee. Aseg\u00farate de que el dispositivo tiene una IP est\u00e1tica o reserva DHCP.",
+        "data": {
+          "host": "Nombre de host o direcci\u00f3n IP"
+        }
+      },
+      "mode": {
+        "title": "Modo de actualizaci\u00f3n",
+        "description": "Elige c\u00f3mo recibe datos la integraci\u00f3n desde el dispositivo.",
+        "data": {
+          "update_mode": "Modo de actualizaci\u00f3n",
+          "auto_configure": "Auto-configurar dispositivo para Local Push"
+        },
+        "data_description": {
+          "update_mode": "**Local Push** (recomendado): El dispositivo env\u00eda datos a Home Assistant en tiempo real (m\u00e1s r\u00e1pido, menor latencia). **Polling**: Home Assistant consulta peri\u00f3dicamente al dispositivo (simple, no requiere cambios en el dispositivo).",
+          "auto_configure": "Si se activa, la integraci\u00f3n configurar\u00e1 autom\u00e1ticamente tu WiBeee para que env\u00ede datos a esta instancia de Home Assistant (IP y puerto 8600). El dispositivo se reiniciar\u00e1 para aplicar los cambios."
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "El dispositivo ya est\u00e1 configurado",
+      "not_wibeee_device": "El dispositivo descubierto no es un monitor de energ\u00eda Wibeee"
+    },
+    "error": {
+      "no_device_info": "No se pudo conectar al dispositivo Wibeee. Verifica la direcci\u00f3n IP y que el dispositivo est\u00e9 encendido.",
+      "auto_configure_failed": "No se pudo auto-configurar el dispositivo para Local Push. Puedes configurarlo manualmente desde la interfaz web del dispositivo.",
+      "unknown": "Se produjo un error desconocido."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opciones de integraci\u00f3n Wibeee",
+        "description": "Configurar par\u00e1metros de actualizaci\u00f3n",
+        "data": {
+          "update_mode": "Modo de actualizaci\u00f3n",
+          "scan_interval": "Intervalo de consulta (segundos)",
+          "auto_configure": "Auto-configurar dispositivo para Local Push"
+        },
+        "data_description": {
+          "update_mode": "**Local Push** (recomendado): El dispositivo env\u00eda datos en tiempo real. **Polling**: Consulta peri\u00f3dica.",
+          "scan_interval": "Frecuencia de consulta al dispositivo. Valores m\u00e1s bajos dan actualizaciones m\u00e1s r\u00e1pidas pero pueden sobrecargar el dispositivo. Por defecto son 30 segundos.",
+          "auto_configure": "Configurar autom\u00e1ticamente el WiBeee para que env\u00ede datos a esta instancia de Home Assistant."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "phase_voltage": { "name": "Tensi\u00f3n de fase" },
+      "current": { "name": "Corriente" },
+      "apparent_power": { "name": "Potencia aparente" },
+      "active_power": { "name": "Potencia activa" },
+      "inductive_reactive_power": { "name": "Potencia reactiva inductiva" },
+      "capacitive_reactive_power": { "name": "Potencia reactiva capacitiva" },
+      "frequency": { "name": "Frecuencia" },
+      "power_factor": { "name": "Factor de potencia" },
+      "active_energy": { "name": "Energ\u00eda activa" },
+      "inductive_reactive_energy": { "name": "Energ\u00eda reactiva inductiva" },
+      "capacitive_reactive_energy": { "name": "Energ\u00eda reactiva capacitiva" },
+      "angle": { "name": "\u00c1ngulo" },
+      "thd_current": { "name": "THD Corriente" },
+      "thd_current_fundamental": { "name": "THD Corriente fundamental" },
+      "thd_current_harmonic_3": { "name": "THD Corriente arm\u00f3nico 3" },
+      "thd_current_harmonic_5": { "name": "THD Corriente arm\u00f3nico 5" },
+      "thd_current_harmonic_7": { "name": "THD Corriente arm\u00f3nico 7" },
+      "thd_current_harmonic_9": { "name": "THD Corriente arm\u00f3nico 9" },
+      "thd_voltage": { "name": "THD Tensi\u00f3n" },
+      "thd_voltage_fundamental": { "name": "THD Tensi\u00f3n fundamental" },
+      "thd_voltage_harmonic_3": { "name": "THD Tensi\u00f3n arm\u00f3nico 3" },
+      "thd_voltage_harmonic_5": { "name": "THD Tensi\u00f3n arm\u00f3nico 5" },
+      "thd_voltage_harmonic_7": { "name": "THD Tensi\u00f3n arm\u00f3nico 7" },
+      "thd_voltage_harmonic_9": { "name": "THD Tensi\u00f3n arm\u00f3nico 9" }
+    }
+  }
+}

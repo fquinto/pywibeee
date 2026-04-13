@@ -5,12 +5,16 @@ requires = ["setuptools", "wheel"]
 [project]
 name = "pywibeee"
 dynamic = ["version", "readme"]
-description = "Command line interface (CLI) for WiBeee (old Mirubee) meter"
+description = "Python library and CLI for WiBeee (old Mirubee) energy meter with Home Assistant integration"
 authors = [{ name = "fquinto", email = "fran.quinto@gmail.com" }]
 license = { file = "LICENSE" }
 classifiers = [
     "License :: OSI Approved :: GNU General Public License v2 (GPLv2)",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Operating System :: OS Independent",
     "Topic :: Home Automation",
     "Topic :: System :: Monitoring",
@@ -20,22 +24,31 @@ classifiers = [
     "Intended Audience :: End Users/Desktop",
     "Intended Audience :: Developers",
 ]
-keywords = ["homeautomation", "cli", "interface", "wibeee", "mirubeee",
-              "energy meter", "smart meter", "hass"]
+keywords = ["homeautomation", "cli", "interface", "wibeee", "mirubee",
+              "energy meter", "smart meter", "hass", "home-assistant",
+              "circutor", "smilics"]
 dependencies = [
     "xmltodict >= 0.13.0",
     "requests",
     "aiohttp",
     "httpx",
 ]
-requires-python = ">=3.7"
+requires-python = ">=3.10"
 
 [project.urls]
 Homepage = "https://github.com/fquinto/pywibeee"
+Documentation = "https://github.com/fquinto/pywibeee"
+Repository = "https://github.com/fquinto/pywibeee"
+Issues = "https://github.com/fquinto/pywibeee/issues"
 
 [tool.setuptools.dynamic]
 version = {attr = "pywibeee.__version__"}
 readme = {file = ["README.rst"]}
+
+[tool.setuptools.packages.find]
+include = ["pywibeee*"]
+exclude = ["custom_components*", "tests*", "docs*", "firmware*",
+           "webserver*", "emulator*"]
 
 [project.scripts]
 pywibeee = "pywibeee.main:main"

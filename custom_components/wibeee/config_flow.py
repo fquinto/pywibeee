@@ -7,7 +7,6 @@ from datetime import timedelta
 
 import voluptuous as vol
 from homeassistant import config_entries, exceptions
-from homeassistant.components.dhcp import DhcpServiceInfo
 from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import AbortFlow
@@ -22,6 +21,7 @@ from homeassistant.helpers.selector import (
     SelectSelectorConfig,
     SelectSelectorMode,
 )
+from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
 
 from .api import WibeeeAPI
 from .const import (
@@ -364,24 +364,23 @@ class WibeeeOptionsFlowHandler(config_entries.OptionsFlow):
             ),
         }
 
-        # Show polling interval only for polling mode
-        if current_mode == MODE_POLLING:
-            schema_dict[
-                vol.Optional(
+        # Always show polling interval so users can set it when switching modes
+        schema_dict[
+            vol.Optional(
+                CONF_SCAN_INTERVAL,
+                default=options.get(
                     CONF_SCAN_INTERVAL,
-                    default=options.get(
-                        CONF_SCAN_INTERVAL,
-                        int(DEFAULT_SCAN_INTERVAL.total_seconds()),
-                    ),
-                )
-            ] = NumberSelector(
-                NumberSelectorConfig(
-                    min=5,
-                    max=300,
-                    unit_of_measurement="seconds",
-                    mode=NumberSelectorMode.BOX,
-                )
+                    int(DEFAULT_SCAN_INTERVAL.total_seconds()),
+                ),
             )
+        ] = NumberSelector(
+            NumberSelectorConfig(
+                min=5,
+                max=300,
+                unit_of_measurement="seconds",
+                mode=NumberSelectorMode.BOX,
+            )
+        )
 
         # Show auto-configure option for local push
         schema_dict[

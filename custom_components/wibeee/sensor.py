@@ -116,7 +116,13 @@ async def _setup_polling(
 
     entities: list[WibeeePollingSensor] = []
     if coordinator.data:
-        for phase_key, phase_data in coordinator.data.items():
+        # Process fase4 (Total) first to ensure the parent device exists
+        # before child phase devices that reference it via via_device
+        sorted_phases = sorted(
+            coordinator.data.items(),
+            key=lambda x: (0 if x[0] == "fase4" else 1, x[0]),
+        )
+        for phase_key, phase_data in sorted_phases:
             for sensor_key in phase_data:
                 description = SENSOR_TYPES.get(sensor_key)
                 if description is not None:
@@ -160,7 +166,13 @@ async def _setup_local_push(
     # Create entities based on discovered sensors
     entities: list[WibeeePushSensor] = []
     if initial_data:
-        for phase_key, phase_data in initial_data.items():
+        # Process fase4 (Total) first to ensure the parent device exists
+        # before child phase devices that reference it via via_device
+        sorted_phases = sorted(
+            initial_data.items(),
+            key=lambda x: (0 if x[0] == "fase4" else 1, x[0]),
+        )
+        for phase_key, phase_data in sorted_phases:
             for sensor_key in phase_data:
                 description = SENSOR_TYPES.get(sensor_key)
                 if description is not None:
@@ -332,12 +344,9 @@ class WibeeePollingSensor(
         self._phase_key = phase_key
         self.entity_description = description
 
-        phase_label = PHASE_NAMES.get(phase_key, phase_key)
-
         self._attr_unique_id = _build_unique_id(
             device_info, phase_key, description.key
         )
-        self._attr_name = f"{phase_label} {description.name}"
         self._attr_translation_key = description.translation_key
         self._attr_device_info = _build_device_info(device_info, phase_key)
 
@@ -404,12 +413,9 @@ class WibeeePushSensor(SensorEntity):
         self._attr_available = initial_value is not None
         self.entity_description = description
 
-        phase_label = PHASE_NAMES.get(phase_key, phase_key)
-
         self._attr_unique_id = _build_unique_id(
             device_info, phase_key, description.key
         )
-        self._attr_name = f"{phase_label} {description.name}"
         self._attr_translation_key = description.translation_key
         self._attr_device_info = _build_device_info(device_info, phase_key)
 

@@ -89,7 +89,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id, None)
+        hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
         _LOGGER.info(
             "Unloaded Wibeee entry '%s' (unique_id=%s)",
             entry.title,

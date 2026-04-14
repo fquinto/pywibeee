@@ -52,3 +52,14 @@ exclude = ["custom_components*", "tests*", "docs*", "firmware*",
 
 [project.scripts]
 pywibeee = "pywibeee.main:main"
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.23",
+    "pytest-homeassistant-custom-component>=0.13.300",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

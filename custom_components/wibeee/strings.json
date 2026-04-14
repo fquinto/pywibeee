@@ -50,6 +50,10 @@
     }
   },
   "entity": {
+    "button": {
+      "reboot": { "name": "Reboot Device" },
+      "reset_energy": { "name": "Reset Energy Counters" }
+    },
     "sensor": {
       "phase_voltage": { "name": "Phase Voltage" },
       "current": { "name": "Current" },

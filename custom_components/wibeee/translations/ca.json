@@ -50,6 +50,10 @@
     }
   },
   "entity": {
+    "button": {
+      "reboot": { "name": "Reiniciar dispositiu" },
+      "reset_energy": { "name": "Reiniciar comptadors d'energia" }
+    },
     "sensor": {
       "phase_voltage": { "name": "Tensi\u00f3 de fase" },
       "current": { "name": "Corrent" },

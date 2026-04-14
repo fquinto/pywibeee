@@ -10,6 +10,7 @@ from homeassistant import config_entries, exceptions
 from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import AbortFlow
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
     BooleanSelector,
@@ -88,7 +89,7 @@ def _get_local_ip_sync() -> str:
     try:
         s.connect(("8.8.8.8", 80))
         return s.getsockname()[0]
-    except Exception:
+    except OSError:
         return "127.0.0.1"
     finally:
         s.close()
@@ -107,22 +108,29 @@ async def _get_local_ip(hass: HomeAssistant) -> str:
         from homeassistant.components.network import async_get_source_ip
 
         ip = await async_get_source_ip(hass)
-        if ip:
+        if ip is not None:
             return ip
-    except Exception:  # noqa: BLE001
+    except (ImportError, HomeAssistantError, OSError):
         pass
 
     # 2. URL helper (lightweight, does not require network component)
     try:
+        import ipaddress
         from urllib.parse import urlparse
 
         from homeassistant.helpers.network import get_url
 
         url = get_url(hass, prefer_external=False)
         host = urlparse(url).hostname
-        if host and host not in ("127.0.0.1", "::1", "localhost"):
-            return host
-    except Exception:  # noqa: BLE001
+        if host is not None:
+            try:
+                addr = ipaddress.ip_address(host)
+                if not addr.is_loopback:
+                    return host
+            except ValueError:
+                # Not an IP literal (e.g. hostname) -- usable as-is
+                return host
+    except (ImportError, HomeAssistantError, OSError):
         pass
 
     # 3. Fallback: raw socket probe (blocking, run in executor)
@@ -132,16 +140,9 @@ async def _get_local_ip(hass: HomeAssistant) -> str:
 def _get_ha_port(hass: HomeAssistant) -> int:
     """Get the port Home Assistant's HTTP server is listening on.
 
-    Tries hass.config.api.port first (set by the HTTP component),
-    then helpers.network.get_url, then hass.http.server_port.
+    Uses helpers.network.get_url to read the configured internal URL.
     Falls back to DEFAULT_HA_PORT (8123).
     """
-    try:
-        if hass.config.api is not None:
-            return hass.config.api.port
-    except AttributeError:
-        pass
-
     try:
         from urllib.parse import urlparse
 
@@ -149,15 +150,12 @@ def _get_ha_port(hass: HomeAssistant) -> int:
 
         url = get_url(hass, prefer_external=False)
         port = urlparse(url).port
-        if port:
+        if port is not None:
             return port
-    except Exception:  # noqa: BLE001
+    except (ImportError, HomeAssistantError, OSError):
         pass
 
-    try:
-        return hass.http.server_port  # type: ignore[union-attr]
-    except (AttributeError, TypeError):
-        return DEFAULT_HA_PORT
+    return DEFAULT_HA_PORT
 
 
 class WibeeeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):

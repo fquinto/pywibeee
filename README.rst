@@ -346,3 +346,11 @@ GNU General Public License version 2
 * https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 * https://choosealicense.com/licenses/gpl-2.0/
 * https://opensource.org/licenses/GPL-2.0
+
+
+Community
+---------
+
+Join the Telegram community channel for support, questions, and discussion:
+
+* https://t.me/wibeee_community

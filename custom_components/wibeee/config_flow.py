@@ -271,7 +271,7 @@ class WibeeeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     api = WibeeeAPI(
                         session,
                         self._user_data[CONF_HOST],
-                        timeout=timedelta(seconds=5),
+                        timeout=timedelta(seconds=15),
                     )
                     success = await api.async_configure_push_server(
                         local_ip, ha_port
@@ -363,7 +363,7 @@ class WibeeeOptionsFlowHandler(config_entries.OptionsFlow):
                     api = WibeeeAPI(
                         session,
                         self.config_entry.data[CONF_HOST],
-                        timeout=timedelta(seconds=5),
+                        timeout=timedelta(seconds=15),
                     )
                     success = await api.async_configure_push_server(
                         local_ip, ha_port

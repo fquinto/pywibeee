@@ -207,6 +207,8 @@ Endpoint
 
 The server must respond with ``<<<WBAVG`` to acknowledge receipt.
 
+The server can also send ``<<<WREBOOT`` to remotely reboot the device.
+
 Push parameter mapping
 ~~~~~~~~~~~~~~~~~~~~~~
 
@@ -259,6 +261,27 @@ Configure push via HTTP
    # Reset the device to apply changes
    curl "http://192.168.1.150/config_value?reset=true"
 
+Other useful HTTP endpoints
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: sh
+
+   # Harmonics data
+   curl http://192.168.1.150/services/user/harmonics.xml
+
+   # Waveform data (per phase)
+   curl http://192.168.1.150/services/user/wafeformsF1.xml
+
+   # Read measurement refresh rate
+   curl "http://192.168.1.150/services/user/values.xml?var=WIBEEE.measuresRefresh"
+
+   # Read app refresh rate
+   curl "http://192.168.1.150/services/user/values.xml?var=WIBEEE.appRefresh"
+
+   # Trigger WiFi scan and get results
+   curl "http://192.168.1.150/scan.cgi?getAllBss"
+   curl http://192.168.1.150/scanallresults.xml
+
 
 Device Notes
 ------------
@@ -277,9 +300,9 @@ Open ports
 
 .. code-block::
 
-   80/tcp  open http      Microchip Libraries of Applications TCP/IP Stack httpd
-   502/tcp open modbus    Modbus TCP
-   550/tcp open new-rwho?
+   80/tcp  open http      Web interface, configuration, bootloader commands
+   502/tcp open modbus    Modbus TCP (input registers from 1009)
+   550/tcp open binary    OTA firmware transfer (do NOT use without full understanding)
 
 OTA commands
 ~~~~~~~~~~~~
@@ -322,6 +345,17 @@ Models
      - Wibeee GND
    * - WBP
      - Wibeee SMART PLUG
+
+
+Security
+~~~~~~~~
+
+The WiBeee has no authentication on local HTTP endpoints and uses plain HTTP.
+Recommended precautions:
+
+* Isolate the device on a separate VLAN or IoT network.
+* Use firewall rules to restrict access to ports 80, 502, and 550.
+* Do not expose the device to the internet.
 
 
 Tools

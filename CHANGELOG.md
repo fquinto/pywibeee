@@ -63,9 +63,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Tests
 
-* 43 tests covering config flow (13), push receiver (16), setup/unload (5), and sensors (8).
+* 102 tests covering API client (41), config flow (13), push receiver (16), setup/unload (7), sensors (12), buttons (8), and constants (5).
 * Uses `pytest-homeassistant-custom-component` with `enable_custom_integrations` fixture.
-* Tests verify entity naming, via_device ordering, DHCP MAC format, Energy Dashboard compliance, and unload safety.
+* Tests verify entity naming, via_device ordering, DHCP MAC format, Energy Dashboard compliance, retry logic, and unload safety.
 
 ## 0.0.6 (5th August, 2022)
 

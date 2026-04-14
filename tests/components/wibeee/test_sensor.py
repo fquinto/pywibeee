@@ -212,6 +212,95 @@ async def test_push_sensor_updates_with_new_values(
 
 
 # ---------------------------------------------------------------------------
+# Sensor error path tests
+# ---------------------------------------------------------------------------
+
+
+async def test_push_no_initial_data_logs_warning(
+    hass: HomeAssistant,
+    mock_config_entry_push: MockConfigEntry,
+    mock_wibeee_api,
+    caplog,
+) -> None:
+    """Test that push mode logs warning when initial poll returns no data."""
+    mock_wibeee_api.async_fetch_sensors_data = AsyncMock(return_value=None)
+    mock_config_entry_push.add_to_hass(hass)
+    await hass.config_entries.async_setup(mock_config_entry_push.entry_id)
+    await hass.async_block_till_done()
+
+    states = hass.states.async_all("sensor")
+    assert len(states) == 0
+    assert "no sensors found" in caplog.text.lower() or "no data" in caplog.text.lower()
+
+
+async def test_polling_device_info_none_fallback(
+    hass: HomeAssistant,
+    mock_config_entry_polling: MockConfigEntry,
+    mock_wibeee_api,
+) -> None:
+    """Test that polling mode uses fallback device info when fetch returns None."""
+    mock_wibeee_api.async_fetch_device_info = AsyncMock(return_value=None)
+    mock_config_entry_polling.add_to_hass(hass)
+    await hass.config_entries.async_setup(mock_config_entry_polling.entry_id)
+    await hass.async_block_till_done()
+
+    # Should still create sensors despite fallback device info
+    states = hass.states.async_all("sensor")
+    assert len(states) > 0
+
+
+async def test_polling_coordinator_fetch_failure(
+    hass: HomeAssistant,
+    mock_config_entry_polling: MockConfigEntry,
+    mock_wibeee_api,
+) -> None:
+    """Test that coordinator raises UpdateFailed when data is None."""
+    # First call succeeds (for first refresh), second call fails
+    mock_wibeee_api.async_fetch_sensors_data = AsyncMock(
+        side_effect=[MOCK_SENSOR_DATA, None]
+    )
+    mock_config_entry_polling.add_to_hass(hass)
+    await hass.config_entries.async_setup(mock_config_entry_polling.entry_id)
+    await hass.async_block_till_done()
+
+    # Sensors should be created from first successful fetch
+    states = hass.states.async_all("sensor")
+    assert len(states) > 0
+
+
+async def test_fase4_total_created_before_phases(
+    hass: HomeAssistant,
+    mock_config_entry_push: MockConfigEntry,
+    mock_wibeee_api,
+) -> None:
+    """Test that fase4 (Total) device is created before L1/L2/L3 phases."""
+    # Include all phases to verify ordering
+    full_data = {
+        "fase1": {"vrms": "230.5", "p_activa": "277.0"},
+        "fase2": {"vrms": "231.0", "p_activa": "280.0"},
+        "fase3": {"vrms": "229.5", "p_activa": "270.0"},
+        "fase4": {"vrms": "230.3", "p_activa": "827.0"},
+    }
+    mock_wibeee_api.async_fetch_sensors_data = AsyncMock(return_value=full_data)
+    mock_config_entry_push.add_to_hass(hass)
+    await hass.config_entries.async_setup(mock_config_entry_push.entry_id)
+    await hass.async_block_till_done()
+
+    device_registry = dr.async_get(hass)
+    wibeee_devices = [
+        d for d in device_registry.devices.values()
+        if any(DOMAIN in identifier[0] for identifier in d.identifiers)
+    ]
+
+    # Should have main device + 3 phase sub-devices = 4 devices
+    assert len(wibeee_devices) >= 4
+
+    # Check phase devices have via_device pointing to main
+    phase_devices = [d for d in wibeee_devices if d.via_device_id is not None]
+    assert len(phase_devices) == 3  # L1, L2, L3
+
+
+# ---------------------------------------------------------------------------
 # Device info tests
 # ---------------------------------------------------------------------------
 

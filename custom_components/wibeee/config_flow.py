@@ -95,21 +95,65 @@ def _get_local_ip_sync() -> str:
 
 
 async def _get_local_ip(hass: HomeAssistant) -> str:
-    """Determine the local IP of the Home Assistant instance."""
+    """Determine the local IP of the Home Assistant instance.
+
+    Uses a 3-tier fallback strategy:
+    1. network component's async_get_source_ip (most reliable, HA-recommended)
+    2. helpers.network.get_url parsed hostname (lightweight, no component dep)
+    3. Raw socket probe (last resort, blocking via executor)
+    """
+    # 1. Preferred: network component (may not be loaded)
     try:
         from homeassistant.components.network import async_get_source_ip
-        from homeassistant.components.network.const import PUBLIC_TARGET_IP
 
-        return await async_get_source_ip(hass, target_ip=PUBLIC_TARGET_IP)
-    except Exception:
-        return await hass.async_add_executor_job(_get_local_ip_sync)
+        ip = await async_get_source_ip(hass)
+        if ip:
+            return ip
+    except Exception:  # noqa: BLE001
+        pass
+
+    # 2. URL helper (lightweight, does not require network component)
+    try:
+        from urllib.parse import urlparse
+
+        from homeassistant.helpers.network import get_url
+
+        url = get_url(hass, prefer_external=False)
+        host = urlparse(url).hostname
+        if host and host not in ("127.0.0.1", "::1", "localhost"):
+            return host
+    except Exception:  # noqa: BLE001
+        pass
+
+    # 3. Fallback: raw socket probe (blocking, run in executor)
+    return await hass.async_add_executor_job(_get_local_ip_sync)
 
 
 def _get_ha_port(hass: HomeAssistant) -> int:
     """Get the port Home Assistant's HTTP server is listening on.
 
-    Falls back to DEFAULT_HA_PORT (8123) if not determinable.
+    Tries hass.config.api.port first (set by the HTTP component),
+    then helpers.network.get_url, then hass.http.server_port.
+    Falls back to DEFAULT_HA_PORT (8123).
     """
+    try:
+        if hass.config.api is not None:
+            return hass.config.api.port
+    except AttributeError:
+        pass
+
+    try:
+        from urllib.parse import urlparse
+
+        from homeassistant.helpers.network import get_url
+
+        url = get_url(hass, prefer_external=False)
+        port = urlparse(url).port
+        if port:
+            return port
+    except Exception:  # noqa: BLE001
+        pass
+
     try:
         return hass.http.server_port  # type: ignore[union-attr]
     except (AttributeError, TypeError):

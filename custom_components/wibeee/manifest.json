@@ -1,13 +1,15 @@
 {
   "domain": "wibeee",
   "name": "Wibeee Energy Monitor",
+  "after_dependencies": [
+    "network"
+  ],
   "codeowners": [
     "@fquinto"
   ],
   "config_flow": true,
   "dependencies": [
-    "http",
-    "network"
+    "http"
   ],
   "dhcp": [
     {

@@ -9,7 +9,7 @@ import re
 import os
 from setuptools import find_packages, setup
 
-DEPENDENCIES = ["xmltodict", "requests", "aiohttp", "httpx"]
+DEPENDENCIES = ["xmltodict", "httpx"]
 EXCLUDE_FROM_PACKAGES = ["contrib", "docs", "tests*"]
 CURDIR = os.path.abspath(os.path.dirname(__file__))
 

@@ -10,8 +10,6 @@ sudo -H pip3 install httpx
 """
 
 import httpx
-import requests
-import urllib.request
 
 download = True
 continueWhiling = True
@@ -34,13 +32,12 @@ while continueWhiling:
         # print(f'Trying {url}...')
         print(f'Checking version {v1}.{v2}.{v3} and model {model}...', end='', flush=True)
         if download:
-            client = httpx.Client()
-            r = client.get(url)
-            if r.status_code == 200:
-                print(f'\n\n{url} Found!\n')
-                r2 = requests.get(url)
-                with open(f'{fname}', 'wb') as f:
-                    f.write(r2.content)
+            with httpx.Client() as client:
+                r = client.get(url)
+                if r.status_code == 200:
+                    print(f'\n\n{url} Found!\n')
+                    with open(f'{fname}', 'wb') as f:
+                        f.write(r.content)
         v3 += 1
         if v3 > 999:
             v2 += 1

@@ -29,8 +29,6 @@ keywords = ["homeautomation", "cli", "interface", "wibeee", "mirubee",
               "circutor", "smilics"]
 dependencies = [
     "xmltodict >= 0.13.0",
-    "requests >= 2.32.2",
-    "aiohttp >= 3.10.11",
     "httpx >= 0.23.1",
 ]
 requires-python = ">=3.10"

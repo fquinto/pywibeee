@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## Integration 1.2.0 / Library 0.0.7 (2026)
+## Integration 1.2.0 / Library 0.1.0 (2026)
 
 ### Added — Home Assistant Integration (`custom_components/wibeee/`)
 
@@ -36,19 +36,36 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed — CLI Library (`pywibeee/`)
 
+* **Consolidated HTTP client**: removed `requests` and `aiohttp` dependencies — the library now uses only `httpx` for both sync (`httpx.Client`) and async (`httpx.AsyncClient`) operations.
+* `callurl(url)` now uses `httpx.Client` (sync), new `callurlAsync(url)` uses `httpx.AsyncClient`.
+* Removed `--urlcallmethod` / `-m` CLI argument — only one HTTP method (`httpx`) is used now.
+* Simplified `asyncCall()` — no longer accepts `asynctype` parameter.
+* Dependencies reduced to just `xmltodict` and `httpx`.
 * Refactored `getModelDescription()` — replaced massive if/elif chain with `MODEL_DESCRIPTIONS` dictionary.
 * Refactored `getSensors()` — replaced massive if/elif chain with `SENSOR_DEFINITIONS` dictionary.
 * `asyncCall()` now supports `configureServer` action with `(server_ip, server_port)` tuple.
 * Requires Python >= 3.10.
 * Updated `pyproject.toml`: full project URLs, excludes `custom_components*` from PyPI package.
+* Bumped version to `0.1.0`.
 
 ### Removed
 
 * Removed broken `pywibeee/discovery.py` (imported non-existent module).
+* Removed `requests` and `aiohttp` as library dependencies.
 
 ### Fixed
 
 * Unified version string — single source of truth in `pywibeee/__init__.__version__`.
+
+### Security
+
+* Updated `webserver/` dependencies to fix Dependabot alerts: PyJWT >= 2.8.0, pycryptodome >= 3.19.0, python-multipart >= 0.0.12, idna >= 3.7, certifi >= 2024.7.4, urllib3 >= 2.2.2.
+
+### Tests
+
+* 43 tests covering config flow (13), push receiver (16), setup/unload (5), and sensors (8).
+* Uses `pytest-homeassistant-custom-component` with `enable_custom_integrations` fixture.
+* Tests verify entity naming, via_device ordering, DHCP MAC format, Energy Dashboard compliance, and unload safety.
 
 ## 0.0.6 (5th August, 2022)
 

@@ -52,7 +52,7 @@ If you choose Local Push with auto-configure enabled, the integration sends the 
 Requirements
 ~~~~~~~~~~~~
 
-* Home Assistant 2024.1.0 or later.
+* Home Assistant 2025.1.0 or later.
 * WiBeee device accessible on the local network (static IP or DHCP reservation recommended).
 * For Local Push: the WiBeee must be able to reach HA's HTTP port (8123 by default).
 
@@ -69,14 +69,14 @@ Features
 * Get version, model, device name, info, status, and sensor list.
 * Actions: reboot (via command or web), reset energy counters, configure push server.
 * Output formats: xml, json, plain text, file.
-* 3 HTTP methods: ``async_httpx`` (default), ``async_aiohttp``, ``request``.
+* Uses ``httpx`` for both sync and async HTTP calls (no other HTTP dependencies).
 
 Requirements
 ~~~~~~~~~~~~
 
 .. code-block:: sh
 
-   pip install xmltodict requests aiohttp httpx
+   pip install xmltodict httpx
 
 Installation
 ~~~~~~~~~~~~
@@ -101,7 +101,6 @@ Usage
    pywibeee -h
 
    usage: pywibeee [-h] [-version] (--host HOST | --auto) [-p PORT] [-t SETTIMEOUT]
-                   [-m {async_httpx,async_aiohttp,request}]
                    [-o {xml,json,plain,file}]
                    (-a {reboot,rebootweb,resetenergy,configureserver} | -g {model,version,status,info,sensors,devicename})
                    [--serverip SERVERIP] [--serverport SERVERPORT]
@@ -116,8 +115,6 @@ Usage
      -p PORT, --port PORT  set port (default 80)
      -t SETTIMEOUT, --settimeout SETTIMEOUT
                            set timeout in seconds (default 10.0)
-     -m METHOD, --urlcallmethod METHOD
-                           async_httpx|async_aiohttp|request (default async_httpx)
      -o FORMAT, --output FORMAT
                            xml|json|plain|file
      -a ACTION, --action ACTION

@@ -1,15 +1,16 @@
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=68.0", "wheel"]
 
 [project]
 name = "pywibeee"
-dynamic = ["version", "readme"]
+dynamic = ["version"]
+readme = {file = "README.rst", content-type = "text/x-rst"}
 description = "Python library and CLI for WiBeee (old Mirubee) energy meter with Home Assistant integration"
 authors = [{ name = "fquinto", email = "fran.quinto@gmail.com" }]
-license = { file = "LICENSE" }
+license = "GPL-2.0-only"
+license-files = ["LICENSE"]
 classifiers = [
-    "License :: OSI Approved :: GNU General Public License v2 (GPLv2)",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -41,7 +42,6 @@ Issues = "https://github.com/fquinto/pywibeee/issues"
 
 [tool.setuptools.dynamic]
 version = {attr = "pywibeee.__version__"}
-readme = {file = ["README.rst"]}
 
 [tool.setuptools.packages.find]
 include = ["pywibeee*"]

@@ -205,7 +205,7 @@ Endpoint
 
    GET /Wibeee/receiverAvg?mac=001ec0112233&v1=230.5&a1=277&e1=222157&vt=230.5&...
 
-The server must respond with ``<<<WBAVG `` to acknowledge receipt.
+The server must respond with ``<<<WBAVG`` to acknowledge receipt.
 
 Push parameter mapping
 ~~~~~~~~~~~~~~~~~~~~~~

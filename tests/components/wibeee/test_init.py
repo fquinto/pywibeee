@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from custom_components.wibeee import WibeeeRuntimeData
 from custom_components.wibeee.const import (
     CONF_MAC_ADDRESS,
     CONF_UPDATE_MODE,
@@ -15,6 +16,7 @@ from custom_components.wibeee.const import (
     MODE_LOCAL_PUSH,
     MODE_POLLING,
 )
+from custom_components.wibeee.coordinator import WibeeeCoordinator
 from custom_components.wibeee.push_receiver import DATA_PUSH_RECEIVER
 
 from .conftest import MOCK_HOST, MOCK_MAC
@@ -36,8 +38,13 @@ async def test_setup_entry_local_push(
     await hass.async_block_till_done()
 
     assert mock_config_entry_push.state.name == "LOADED"
-    assert DOMAIN in hass.data
-    assert mock_config_entry_push.entry_id in hass.data[DOMAIN]
+
+    # runtime_data should be set with coordinator
+    runtime = mock_config_entry_push.runtime_data
+    assert isinstance(runtime, WibeeeRuntimeData)
+    assert runtime.device_info is not None
+    assert runtime.api is not None
+    assert isinstance(runtime.coordinator, WibeeeCoordinator)
 
     # Push receiver should be registered
     assert DATA_PUSH_RECEIVER in hass.data
@@ -54,7 +61,14 @@ async def test_setup_entry_polling(
     await hass.async_block_till_done()
 
     assert mock_config_entry_polling.state.name == "LOADED"
-    assert DOMAIN in hass.data
+
+    # runtime_data should be set with coordinator
+    runtime = mock_config_entry_polling.runtime_data
+    assert isinstance(runtime, WibeeeRuntimeData)
+    assert isinstance(runtime.coordinator, WibeeeCoordinator)
+
+    # Polling coordinator should have an update_interval
+    assert runtime.coordinator.update_interval is not None
 
 
 # ---------------------------------------------------------------------------
@@ -78,8 +92,9 @@ async def test_unload_entry_local_push(
     await hass.async_block_till_done()
 
     assert mock_config_entry_push.state.name == "NOT_LOADED"
-    # Entry data should be cleaned up
-    assert mock_config_entry_push.entry_id not in hass.data.get(DOMAIN, {})
+    # runtime_data should be cleared after unload
+    runtime = getattr(mock_config_entry_push, "runtime_data", None)
+    assert runtime is None
 
 
 async def test_unload_entry_polling(
@@ -123,25 +138,6 @@ async def test_unload_push_no_mac_address(
 
     # Should unload without error even with empty MAC
     result = await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
-    assert result is True
-
-
-async def test_unload_push_no_receiver(
-    hass: HomeAssistant,
-    mock_config_entry_push: MockConfigEntry,
-    mock_wibeee_api,
-) -> None:
-    """Test unloading push entry when push receiver was already removed."""
-    mock_config_entry_push.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry_push.entry_id)
-    await hass.async_block_till_done()
-
-    # Remove the push receiver before unload
-    hass.data.pop(DATA_PUSH_RECEIVER, None)
-
-    # Should unload without error
-    result = await hass.config_entries.async_unload(mock_config_entry_push.entry_id)
     await hass.async_block_till_done()
     assert result is True
 

@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import xml.etree.ElementTree as ET
 from datetime import timedelta
 from typing import Any
 
 import aiohttp
-import xmltodict
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -122,13 +122,15 @@ class WibeeeAPI:
             return None
 
         try:
-            parsed = xmltodict.parse(text)
-            if "response" in parsed:
-                return dict(parsed["response"])
-            return None
-        except Exception as exc:
+            root = ET.fromstring(text)
+        except ET.ParseError as exc:
             _LOGGER.error("Error parsing status XML: %s", exc)
             return None
+
+        if root.tag != "response":
+            return None
+
+        return {child.tag: child.text or "" for child in root}
 
     async def async_fetch_device_info(
         self, retries: int = 3
@@ -186,11 +188,14 @@ class WibeeeAPI:
             return None
 
         try:
-            parsed = xmltodict.parse(text)
-            return parsed.get("devices", {}).get("id")
-        except Exception as exc:
+            root = ET.fromstring(text)
+        except ET.ParseError as exc:
             _LOGGER.debug("Error parsing devices.xml: %s", exc)
             return None
+
+        if root.tag == "devices":
+            return root.findtext("id")
+        return None
 
     async def _fetch_mac_address(
         self, wibeee_id: str, retries: int = 2
@@ -214,15 +219,14 @@ class WibeeeAPI:
             return None
 
         try:
-            parsed = xmltodict.parse(text)
-            variables = parsed.get("values", {}).get("variable", [])
-            if isinstance(variables, dict):
-                variables = [variables]
-            for var in variables:
-                if var.get("id") == var_name:
-                    return var.get("value")
-        except Exception as exc:
+            root = ET.fromstring(text)
+        except ET.ParseError as exc:
             _LOGGER.debug("Error parsing values.xml for %s: %s", var_name, exc)
+            return None
+
+        for var in root.findall("variable"):
+            if var.findtext("id") == var_name:
+                return var.findtext("value")
         return None
 
     async def _fetch_model_from_web(self, retries: int = 1) -> str | None:

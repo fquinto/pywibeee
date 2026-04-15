@@ -14,24 +14,20 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Any
 
 from homeassistant.components.button import (
     ButtonDeviceClass,
     ButtonEntity,
     ButtonEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, EntityCategory
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .api import WibeeeAPI, WibeeeDeviceInfo
+from . import WibeeeConfigEntry
+from .api import WibeeeAPI
 from .const import (
-    CONF_MAC_ADDRESS,
-    CONF_WIBEEE_ID,
     DOMAIN,
     KNOWN_MODELS,
 )
@@ -66,28 +62,13 @@ BUTTON_TYPES: tuple[WibeeeButtonEntityDescription, ...] = (
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: WibeeeConfigEntry,
     async_add_entities: AddEntitiesCallback,
-) -> bool:
+) -> None:
     """Set up Wibeee button entities from a config entry."""
-    host = entry.data[CONF_HOST]
-    mac_addr = entry.data[CONF_MAC_ADDRESS]
-    wibeee_id = entry.data.get(CONF_WIBEEE_ID, "WIBEEE")
-
-    session = async_get_clientsession(hass)
-    api = WibeeeAPI(session, host)
-
-    # Fetch device info for the device registry
-    device_info = await api.async_fetch_device_info(retries=3)
-    if device_info is None:
-        _LOGGER.error("Could not get device info from %s for buttons", host)
-        device_info = WibeeeDeviceInfo(
-            wibeee_id=wibeee_id,
-            mac_addr=mac_addr,
-            model="Unknown",
-            firmware_version="Unknown",
-            ip_addr=host,
-        )
+    runtime = entry.runtime_data
+    api = runtime.api
+    device_info = runtime.device_info
 
     entities = [
         WibeeeButton(api=api, device_info=device_info, description=desc)
@@ -99,9 +80,8 @@ async def async_setup_entry(
         "Added %d button entities for Wibeee %s (%s)",
         len(entities),
         device_info.mac_addr_short,
-        host,
+        device_info.ip_addr,
     )
-    return True
 
 
 class WibeeeButton(ButtonEntity):
@@ -116,20 +96,16 @@ class WibeeeButton(ButtonEntity):
     def __init__(
         self,
         api: WibeeeAPI,
-        device_info: WibeeeDeviceInfo,
+        device_info,
         description: WibeeeButtonEntityDescription,
     ) -> None:
         """Initialize the button entity."""
         self._api = api
         self.entity_description = description
 
-        model_name = KNOWN_MODELS.get(
-            device_info.model, f"Wibeee {device_info.model}"
-        )
+        model_name = KNOWN_MODELS.get(device_info.model, f"Wibeee {device_info.model}")
 
-        self._attr_unique_id = (
-            f"{device_info.mac_addr_formatted}_{description.key}"
-        )
+        self._attr_unique_id = f"{device_info.mac_addr_formatted}_{description.key}"
         self._attr_translation_key = description.translation_key
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, device_info.mac_addr_formatted)},

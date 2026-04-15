@@ -2,20 +2,17 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
-from homeassistant.const import UnitOfEnergy, UnitOfPower
+from homeassistant.const import UnitOfEnergy
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.wibeee.const import DOMAIN
-from custom_components.wibeee.push_receiver import DATA_PUSH_RECEIVER
 
 from .conftest import (
-    MOCK_DEVICE_INFO,
-    MOCK_HOST,
     MOCK_MAC,
     MOCK_PUSH_QUERY,
     MOCK_SENSOR_DATA,
@@ -43,8 +40,6 @@ async def test_polling_sensors_created(
 
     # Check entity IDs follow the expected pattern
     entity_ids = [s.entity_id for s in states]
-    # With has_entity_name=True + translation_key, HA generates entity IDs
-    # from translation keys. Check we have voltage and power sensors.
     assert any("voltage" in eid or "phase_voltage" in eid for eid in entity_ids), (
         f"No voltage sensor found in: {entity_ids}"
     )
@@ -66,8 +61,7 @@ async def test_polling_sensor_values(
     # Find the active power sensor for fase1
     states = hass.states.async_all("sensor")
     power_sensors = [
-        s for s in states
-        if "active_power" in s.entity_id and "l1" in s.entity_id
+        s for s in states if "active_power" in s.entity_id and "l1" in s.entity_id
     ]
 
     if power_sensors:
@@ -167,8 +161,7 @@ async def test_push_sensor_updates_via_http(
     # Find the active power sensor for fase1 (push param "a1" -> p_activa)
     states = hass.states.async_all("sensor")
     power_sensors = [
-        s for s in states
-        if "active_power" in s.entity_id and "l1" in s.entity_id
+        s for s in states if "active_power" in s.entity_id and "l1" in s.entity_id
     ]
 
     if power_sensors:
@@ -202,8 +195,7 @@ async def test_push_sensor_updates_with_new_values(
     # Check that sensors reflect the updated values
     states = hass.states.async_all("sensor")
     power_sensors = [
-        s for s in states
-        if "active_power" in s.entity_id and "l1" in s.entity_id
+        s for s in states if "active_power" in s.entity_id and "l1" in s.entity_id
     ]
 
     if power_sensors:
@@ -288,7 +280,8 @@ async def test_fase4_total_created_before_phases(
 
     device_registry = dr.async_get(hass)
     wibeee_devices = [
-        d for d in device_registry.devices.values()
+        d
+        for d in device_registry.devices.values()
         if any(DOMAIN in identifier[0] for identifier in d.identifiers)
     ]
 
@@ -320,13 +313,12 @@ async def test_device_info_registered(
 
     # Should have at least the main device
     wibeee_devices = [
-        d for d in devices
+        d
+        for d in devices
         if any(DOMAIN in identifier[0] for identifier in d.identifiers)
     ]
     assert len(wibeee_devices) >= 1
 
     # Check main device info
-    main_device = next(
-        (d for d in wibeee_devices if d.manufacturer == "Smilics"), None
-    )
+    main_device = next((d for d in wibeee_devices if d.manufacturer == "Smilics"), None)
     assert main_device is not None

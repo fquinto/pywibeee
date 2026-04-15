@@ -140,19 +140,34 @@ def mock_config_entry_polling() -> MockConfigEntry:
 # ---------------------------------------------------------------------------
 
 
+def _make_api_mock() -> MagicMock:
+    """Create a standard WibeeeAPI mock with all methods configured."""
+    api = MagicMock()
+    api.async_check_connection = AsyncMock(return_value=True)
+    api.async_fetch_device_info = AsyncMock(return_value=MOCK_DEVICE_INFO)
+    api.async_fetch_sensors_data = AsyncMock(return_value=MOCK_SENSOR_DATA)
+    api.async_fetch_status = AsyncMock(return_value=MOCK_STATUS_XML)
+    api.async_configure_push_server = AsyncMock(return_value=True)
+    api.async_reboot = AsyncMock(return_value=True)
+    api.async_reset_energy = AsyncMock(return_value=True)
+    api.host = MOCK_HOST
+    return api
+
+
 @pytest.fixture
 def mock_wibeee_api() -> Generator[MagicMock]:
-    """Mock the WibeeeAPI class for sensor/init tests."""
+    """Mock the WibeeeAPI class in __init__.py.
+
+    Only __init__.py constructs WibeeeAPI instances. The API instance
+    flows to coordinator, sensor.py, and button.py via entry.runtime_data.
+    """
+    api = _make_api_mock()
+
     with patch(
-        "custom_components.wibeee.sensor.WibeeeAPI", autospec=True
-    ) as mock_cls:
-        api = mock_cls.return_value
-        api.async_check_connection = AsyncMock(return_value=True)
-        api.async_fetch_device_info = AsyncMock(return_value=MOCK_DEVICE_INFO)
-        api.async_fetch_sensors_data = AsyncMock(return_value=MOCK_SENSOR_DATA)
-        api.async_fetch_status = AsyncMock(return_value=MOCK_STATUS_XML)
-        api.async_configure_push_server = AsyncMock(return_value=True)
-        api.host = MOCK_HOST
+        "custom_components.wibeee.WibeeeAPI",
+        autospec=True,
+        return_value=api,
+    ):
         yield api
 
 

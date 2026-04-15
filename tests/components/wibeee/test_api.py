@@ -8,11 +8,11 @@ from __future__ import annotations
 
 import asyncio
 from datetime import timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import aiohttp
 import pytest
-from aiohttp import ClientResponseError, ClientSession
+from aiohttp import ClientSession
 
 from custom_components.wibeee.api import WibeeeAPI, WibeeeDeviceInfo
 
@@ -142,10 +142,12 @@ class TestAsyncFetchUrl:
 
     @pytest.mark.asyncio
     async def test_http_error_with_retry_then_success(self) -> None:
-        session = _make_session([
-            _make_response(500, ""),
-            _make_response(200, "OK"),
-        ])
+        session = _make_session(
+            [
+                _make_response(500, ""),
+                _make_response(200, "OK"),
+            ]
+        )
         api = WibeeeAPI(session, "192.168.1.30")
         result = await api.async_fetch_url("http://x/test", retries=1)
         assert result == "OK"
@@ -173,11 +175,13 @@ class TestAsyncFetchUrl:
     @pytest.mark.asyncio
     async def test_retry_exhaustion(self) -> None:
         """All retries fail -> returns None."""
-        session = _make_session([
-            _make_response(503, ""),
-            _make_response(503, ""),
-            _make_response(503, ""),
-        ])
+        session = _make_session(
+            [
+                _make_response(503, ""),
+                _make_response(503, ""),
+                _make_response(503, ""),
+            ]
+        )
         api = WibeeeAPI(session, "192.168.1.30")
         result = await api.async_fetch_url("http://x/test", retries=2)
         assert result is None
@@ -252,7 +256,7 @@ class TestAsyncFetchSensorsData:
 
     @pytest.mark.asyncio
     async def test_no_fase_keys(self) -> None:
-        xml = '<response><model>WBT</model><webversion>1.0</webversion></response>'
+        xml = "<response><model>WBT</model><webversion>1.0</webversion></response>"
         session = _make_session([_make_response(200, xml)])
         api = WibeeeAPI(session, "192.168.1.30")
         result = await api.async_fetch_sensors_data(retries=0)
@@ -270,11 +274,13 @@ class TestAsyncFetchDeviceInfo:
     @pytest.mark.asyncio
     async def test_full_info(self) -> None:
         """All requests succeed - returns complete device info."""
-        session = _make_session([
-            _make_response(200, STATUS_XML),       # status.xml
-            _make_response(200, DEVICES_XML),       # devices.xml
-            _make_response(200, VALUES_MAC_XML),    # values.xml?var=WIBEEE.macAddr
-        ])
+        session = _make_session(
+            [
+                _make_response(200, STATUS_XML),  # status.xml
+                _make_response(200, DEVICES_XML),  # devices.xml
+                _make_response(200, VALUES_MAC_XML),  # values.xml?var=WIBEEE.macAddr
+            ]
+        )
         api = WibeeeAPI(session, "192.168.1.30")
         info = await api.async_fetch_device_info(retries=0)
         assert info is not None
@@ -286,11 +292,13 @@ class TestAsyncFetchDeviceInfo:
     @pytest.mark.asyncio
     async def test_no_mac_returns_none(self) -> None:
         """If MAC can't be determined, returns None."""
-        session = _make_session([
-            _make_response(200, STATUS_XML),   # status
-            _make_response(200, DEVICES_XML),  # devices
-            _make_response(404, ""),           # values (MAC) -> fail
-        ])
+        session = _make_session(
+            [
+                _make_response(200, STATUS_XML),  # status
+                _make_response(200, DEVICES_XML),  # devices
+                _make_response(404, ""),  # values (MAC) -> fail
+            ]
+        )
         api = WibeeeAPI(session, "192.168.1.30")
         info = await api.async_fetch_device_info(retries=0)
         assert info is None
@@ -299,14 +307,16 @@ class TestAsyncFetchDeviceInfo:
     async def test_status_fails_uses_fallbacks(self) -> None:
         """If status.xml fails, model comes from web scraping, firmware from values."""
         web_page = '<html><script>var model = "WBB";</script></html>'
-        session = _make_session([
-            _make_response(500, ""),               # status.xml fails
-            _make_response(200, DEVICES_XML),      # devices.xml
-            _make_response(200, VALUES_MAC_XML),   # values.xml (MAC)
-            _make_response(200, ""),               # login redirect (model scrape)
-            _make_response(200, web_page),         # index.html (model scrape)
-            _make_response(200, VALUES_SOFT_VERSION_XML),  # values (firmware)
-        ])
+        session = _make_session(
+            [
+                _make_response(500, ""),  # status.xml fails
+                _make_response(200, DEVICES_XML),  # devices.xml
+                _make_response(200, VALUES_MAC_XML),  # values.xml (MAC)
+                _make_response(200, ""),  # login redirect (model scrape)
+                _make_response(200, web_page),  # index.html (model scrape)
+                _make_response(200, VALUES_SOFT_VERSION_XML),  # values (firmware)
+            ]
+        )
         api = WibeeeAPI(session, "192.168.1.30")
         info = await api.async_fetch_device_info(retries=0)
         assert info is not None
@@ -346,10 +356,12 @@ class TestAsyncCheckConnection:
     @pytest.mark.asyncio
     async def test_no_response(self) -> None:
         # async_check_connection uses retries=1, so we need 2 responses
-        session = _make_session([
-            _make_response(500, ""),
-            _make_response(500, ""),
-        ])
+        session = _make_session(
+            [
+                _make_response(500, ""),
+                _make_response(500, ""),
+            ]
+        )
         api = WibeeeAPI(session, "192.168.1.30")
         assert await api.async_check_connection() is False
 
@@ -364,10 +376,12 @@ class TestAsyncConfigurePushServer:
 
     @pytest.mark.asyncio
     async def test_success(self) -> None:
-        session = _make_session([
-            _make_response(200, "OK"),  # configura_server
-            _make_response(200, "OK"),  # config_value?reset=true
-        ])
+        session = _make_session(
+            [
+                _make_response(200, "OK"),  # configura_server
+                _make_response(200, "OK"),  # config_value?reset=true
+            ]
+        )
         api = WibeeeAPI(session, "192.168.1.30")
         result = await api.async_configure_push_server("192.168.1.50", 8123)
         assert result is True
@@ -375,10 +389,12 @@ class TestAsyncConfigurePushServer:
     @pytest.mark.asyncio
     async def test_hex_port_in_url(self) -> None:
         """Verify port is sent as 4-char hex."""
-        session = _make_session([
-            _make_response(200, "OK"),
-            _make_response(200, "OK"),
-        ])
+        session = _make_session(
+            [
+                _make_response(200, "OK"),
+                _make_response(200, "OK"),
+            ]
+        )
         api = WibeeeAPI(session, "192.168.1.30")
         await api.async_configure_push_server("192.168.1.50", 8123)
 
@@ -390,10 +406,12 @@ class TestAsyncConfigurePushServer:
     @pytest.mark.asyncio
     async def test_hex_port_8600(self) -> None:
         """8600 = 2198 hex."""
-        session = _make_session([
-            _make_response(200, "OK"),
-            _make_response(200, "OK"),
-        ])
+        session = _make_session(
+            [
+                _make_response(200, "OK"),
+                _make_response(200, "OK"),
+            ]
+        )
         api = WibeeeAPI(session, "192.168.1.30")
         await api.async_configure_push_server("10.0.0.1", 8600)
 
@@ -404,11 +422,13 @@ class TestAsyncConfigurePushServer:
     @pytest.mark.asyncio
     async def test_config_fails(self) -> None:
         # async_configure_push_server uses retries=2 (3 total attempts)
-        session = _make_session([
-            _make_response(500, ""),
-            _make_response(500, ""),
-            _make_response(500, ""),
-        ])
+        session = _make_session(
+            [
+                _make_response(500, ""),
+                _make_response(500, ""),
+                _make_response(500, ""),
+            ]
+        )
         api = WibeeeAPI(session, "192.168.1.30")
         result = await api.async_configure_push_server("192.168.1.50", 8123)
         assert result is False
@@ -473,11 +493,13 @@ class TestAsyncGetPushServerConfig:
 
     @pytest.mark.asyncio
     async def test_success(self) -> None:
-        session = _make_session([
-            _make_response(200, DEVICES_XML),          # _fetch_device_id
-            _make_response(200, VALUES_SERVER_IP_XML),  # serverIP
-            _make_response(200, VALUES_SERVER_PORT_XML),  # serverPort
-        ])
+        session = _make_session(
+            [
+                _make_response(200, DEVICES_XML),  # _fetch_device_id
+                _make_response(200, VALUES_SERVER_IP_XML),  # serverIP
+                _make_response(200, VALUES_SERVER_PORT_XML),  # serverPort
+            ]
+        )
         api = WibeeeAPI(session, "192.168.1.30")
         result = await api.async_get_push_server_config()
         assert result is not None
@@ -486,12 +508,14 @@ class TestAsyncGetPushServerConfig:
 
     @pytest.mark.asyncio
     async def test_invalid_hex_port(self) -> None:
-        bad_port_xml = '<values><variable><id>serverPort</id><value>ZZZZ</value></variable></values>'
-        session = _make_session([
-            _make_response(200, DEVICES_XML),
-            _make_response(200, VALUES_SERVER_IP_XML),
-            _make_response(200, bad_port_xml),
-        ])
+        bad_port_xml = "<values><variable><id>serverPort</id><value>ZZZZ</value></variable></values>"
+        session = _make_session(
+            [
+                _make_response(200, DEVICES_XML),
+                _make_response(200, VALUES_SERVER_IP_XML),
+                _make_response(200, bad_port_xml),
+            ]
+        )
         api = WibeeeAPI(session, "192.168.1.30")
         result = await api.async_get_push_server_config()
         assert result is not None
@@ -503,12 +527,14 @@ class TestAsyncGetPushServerConfig:
         # _fetch_value("serverIP", retries=1) -> async_fetch_url(retries=1): 2 attempts = 2 responses
         # _fetch_value("serverPort", retries=1) -> async_fetch_url(retries=1): 2 attempts = 2 responses
         # Both fetches happen before the `if server_ip and server_port_hex` guard
-        session = _make_session([
-            _make_response(200, DEVICES_XML),  # _fetch_device_id - success
-            _make_response(404, ""),            # serverIP attempt 1
-            _make_response(404, ""),            # serverIP attempt 2 (retry)
-            _make_response(200, VALUES_SERVER_PORT_XML),  # serverPort attempt 1
-        ])
+        session = _make_session(
+            [
+                _make_response(200, DEVICES_XML),  # _fetch_device_id - success
+                _make_response(404, ""),  # serverIP attempt 1
+                _make_response(404, ""),  # serverIP attempt 2 (retry)
+                _make_response(200, VALUES_SERVER_PORT_XML),  # serverPort attempt 1
+            ]
+        )
         api = WibeeeAPI(session, "192.168.1.30")
         result = await api.async_get_push_server_config()
         assert result is None

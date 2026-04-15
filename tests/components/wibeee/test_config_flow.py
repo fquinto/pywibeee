@@ -21,7 +21,7 @@ from custom_components.wibeee.const import (
     MODE_POLLING,
 )
 
-from .conftest import MOCK_DEVICE_INFO, MOCK_HOST, MOCK_MAC, MOCK_WIBEEE_ID
+from .conftest import MOCK_DEVICE_INFO, MOCK_HOST, MOCK_MAC
 
 
 # ---------------------------------------------------------------------------
@@ -63,9 +63,7 @@ async def test_user_step_connection_error(
     hass: HomeAssistant, mock_setup_entry: AsyncMock
 ) -> None:
     """Test user step shows error when device is unreachable."""
-    with patch(
-        "custom_components.wibeee.config_flow.WibeeeAPI"
-    ) as mock_cls:
+    with patch("custom_components.wibeee.config_flow.WibeeeAPI") as mock_cls:
         api = mock_cls.return_value
         api.async_check_connection = AsyncMock(return_value=False)
 
@@ -171,12 +169,15 @@ async def test_mode_step_auto_configure_success(
         {CONF_HOST: MOCK_HOST},
     )
 
-    with patch(
-        "custom_components.wibeee.config_flow._get_local_ip",
-        return_value="192.168.1.50",
-    ), patch(
-        "custom_components.wibeee.config_flow._get_ha_port",
-        return_value=8123,
+    with (
+        patch(
+            "custom_components.wibeee.config_flow._get_local_ip",
+            return_value="192.168.1.50",
+        ),
+        patch(
+            "custom_components.wibeee.config_flow._get_ha_port",
+            return_value=8123,
+        ),
     ):
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
@@ -207,12 +208,15 @@ async def test_mode_step_auto_configure_failure(
         {CONF_HOST: MOCK_HOST},
     )
 
-    with patch(
-        "custom_components.wibeee.config_flow._get_local_ip",
-        return_value="192.168.1.50",
-    ), patch(
-        "custom_components.wibeee.config_flow._get_ha_port",
-        return_value=8123,
+    with (
+        patch(
+            "custom_components.wibeee.config_flow._get_local_ip",
+            return_value="192.168.1.50",
+        ),
+        patch(
+            "custom_components.wibeee.config_flow._get_ha_port",
+            return_value=8123,
+        ),
     ):
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
@@ -278,9 +282,7 @@ async def test_dhcp_discovery_not_wibeee(
     mock_setup_entry: AsyncMock,
 ) -> None:
     """Test DHCP discovery aborts for non-Wibeee devices."""
-    with patch(
-        "custom_components.wibeee.config_flow.WibeeeAPI"
-    ) as mock_cls:
+    with patch("custom_components.wibeee.config_flow.WibeeeAPI") as mock_cls:
         api = mock_cls.return_value
         api.async_check_connection = AsyncMock(return_value=False)
 
@@ -310,9 +312,7 @@ async def test_options_flow_switch_to_polling(
     mock_config_entry_push.add_to_hass(hass)
 
     # We need to set up the entry first so options flow works
-    with patch(
-        "custom_components.wibeee.async_setup_entry", return_value=True
-    ):
+    with patch("custom_components.wibeee.async_setup_entry", return_value=True):
         await hass.config_entries.async_setup(mock_config_entry_push.entry_id)
         await hass.async_block_till_done()
 
@@ -343,24 +343,23 @@ async def test_options_flow_auto_configure(
     """Test auto-configure from options flow."""
     mock_config_entry_polling.add_to_hass(hass)
 
-    with patch(
-        "custom_components.wibeee.async_setup_entry", return_value=True
-    ):
-        await hass.config_entries.async_setup(
-            mock_config_entry_polling.entry_id
-        )
+    with patch("custom_components.wibeee.async_setup_entry", return_value=True):
+        await hass.config_entries.async_setup(mock_config_entry_polling.entry_id)
         await hass.async_block_till_done()
 
     result = await hass.config_entries.options.async_init(
         mock_config_entry_polling.entry_id
     )
 
-    with patch(
-        "custom_components.wibeee.config_flow._get_local_ip",
-        return_value="192.168.1.50",
-    ), patch(
-        "custom_components.wibeee.config_flow._get_ha_port",
-        return_value=8123,
+    with (
+        patch(
+            "custom_components.wibeee.config_flow._get_local_ip",
+            return_value="192.168.1.50",
+        ),
+        patch(
+            "custom_components.wibeee.config_flow._get_ha_port",
+            return_value=8123,
+        ),
     ):
         result = await hass.config_entries.options.async_configure(
             result["flow_id"],

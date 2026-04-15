@@ -19,88 +19,137 @@ Device info: http://wibeee.circutor.com/
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
+from datetime import timedelta
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
+from homeassistant.const import CONF_HOST, Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
+from .api import WibeeeAPI, WibeeeDeviceInfo
 from .const import (
     CONF_MAC_ADDRESS,
+    CONF_SCAN_INTERVAL,
     CONF_UPDATE_MODE,
-    DOMAIN,
+    CONF_WIBEEE_ID,
+    DEFAULT_SCAN_INTERVAL,
+    DOMAIN,  # noqa: F401 — re-exported for other modules
     MODE_LOCAL_PUSH,
+    MODE_POLLING,
 )
+from .coordinator import WibeeeCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS = [Platform.BUTTON, Platform.SENSOR]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+@dataclass
+class WibeeeRuntimeData:
+    """Runtime data stored in entry.runtime_data."""
+
+    api: WibeeeAPI
+    device_info: WibeeeDeviceInfo
+    coordinator: WibeeeCoordinator
+
+
+WibeeeConfigEntry = ConfigEntry[WibeeeRuntimeData]
+
+
+async def async_setup_entry(hass: HomeAssistant, entry: WibeeeConfigEntry) -> bool:
     """Set up Wibeee from a config entry."""
     mode = entry.options.get(CONF_UPDATE_MODE, MODE_LOCAL_PUSH)
+    host = entry.data[CONF_HOST]
+    mac_addr = entry.data[CONF_MAC_ADDRESS]
+    wibeee_id = entry.data.get(CONF_WIBEEE_ID, "WIBEEE")
 
-    _LOGGER.info(
-        "Setting up Wibeee config entry '%s' (unique_id=%s, mode=%s)",
-        entry.title,
-        entry.unique_id,
+    _LOGGER.debug(
+        "Setting up Wibeee entry %s (mode=%s, host=%s)",
+        entry.entry_id,
         mode,
+        host,
     )
 
-    # Store entry data in hass.data for use by platforms
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = entry.data
+    session = async_get_clientsession(hass)
+    api = WibeeeAPI(session, host)
 
-    # If local push mode, ensure the push receiver views are registered
-    if mode == MODE_LOCAL_PUSH:
+    # Fetch device info
+    try:
+        device_info = await api.async_fetch_device_info(retries=3)
+    except Exception as err:
+        raise ConfigEntryNotReady(f"Could not connect to Wibeee at {host}") from err
+
+    if device_info is None:
+        _LOGGER.warning("Could not get device info from %s, using fallback", host)
+        device_info = WibeeeDeviceInfo(
+            wibeee_id=wibeee_id,
+            mac_addr=mac_addr,
+            model="Unknown",
+            firmware_version="Unknown",
+            ip_addr=host,
+        )
+
+    # Create coordinator based on mode
+    if mode == MODE_POLLING:
+        scan_interval = timedelta(
+            seconds=entry.options.get(
+                CONF_SCAN_INTERVAL,
+                int(DEFAULT_SCAN_INTERVAL.total_seconds()),
+            )
+        )
+        coordinator = WibeeeCoordinator(
+            hass,
+            api,
+            name=f"Wibeee {device_info.mac_addr_short}",
+            update_interval=scan_interval,
+        )
+        await coordinator.async_config_entry_first_refresh()
+    else:
+        # Push mode: no polling, data arrives via async_set_updated_data()
+        coordinator = WibeeeCoordinator(
+            hass,
+            api,
+            name=f"Wibeee {device_info.mac_addr_short}",
+            update_interval=None,
+        )
+        # Do one initial poll to discover available sensors
+        initial_data = await api.async_fetch_sensors_data(retries=3)
+        if initial_data:
+            coordinator.async_set_updated_data(initial_data)
+
+        # Register with push receiver
         from .push_receiver import async_setup_push_receiver
 
-        async_setup_push_receiver(hass)
+        receiver = async_setup_push_receiver(hass)
+        receiver.register_device(mac_addr, coordinator.async_set_updated_data)
+
+        entry.async_on_unload(lambda: receiver.unregister_device(mac_addr))
+
+    entry.runtime_data = WibeeeRuntimeData(
+        api=api, device_info=device_info, coordinator=coordinator
+    )
 
     # Reload on options change
     entry.async_on_unload(entry.add_update_listener(async_update_options))
 
-    # Forward setup to the sensor platform
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: WibeeeConfigEntry) -> bool:
     """Unload a config entry."""
-    _LOGGER.debug(
-        "Unloading Wibeee entry '%s' (unique_id=%s)",
-        entry.title,
-        entry.unique_id,
-    )
+    _LOGGER.debug("Unloading Wibeee entry %s", entry.entry_id)
 
-    # If local push, unregister the device from the push receiver
-    mode = entry.options.get(CONF_UPDATE_MODE, MODE_LOCAL_PUSH)
-    if mode == MODE_LOCAL_PUSH:
-        from .push_receiver import DATA_PUSH_RECEIVER
-
-        mac_addr = entry.data.get(CONF_MAC_ADDRESS, "")
-        if mac_addr:
-            receiver = hass.data.get(DATA_PUSH_RECEIVER)
-            if receiver is not None:
-                receiver.unregister_device(mac_addr)
-
-    unload_ok = await hass.config_entries.async_unload_platforms(
-        entry, PLATFORMS
-    )
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
     if unload_ok:
-        hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
-        _LOGGER.info(
-            "Unloaded Wibeee entry '%s' (unique_id=%s)",
-            entry.title,
-            entry.unique_id,
-        )
+        entry.runtime_data = None
 
     return unload_ok
 
 
-async def async_update_options(
-    hass: HomeAssistant, entry: ConfigEntry
-) -> None:
+async def async_update_options(hass: HomeAssistant, entry: WibeeeConfigEntry) -> None:
     """Handle options update - reload the entry."""
     await hass.config_entries.async_reload(entry.entry_id)

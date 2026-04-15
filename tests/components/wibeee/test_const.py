@@ -6,7 +6,6 @@ from custom_components.wibeee.const import (
     PUSH_PARAM_TO_SENSOR,
     PUSH_PHASE_MAP,
     SENSOR_TYPES,
-    WibeeeSensorEntityDescription,
 )
 
 
@@ -55,6 +54,5 @@ def test_energy_sensors_have_total_increasing() -> None:
     for key in energy_keys:
         desc = SENSOR_TYPES[key]
         assert desc.state_class == SensorStateClass.TOTAL_INCREASING, (
-            f"Energy sensor '{key}' should use TOTAL_INCREASING, "
-            f"got {desc.state_class}"
+            f"Energy sensor '{key}' should use TOTAL_INCREASING, got {desc.state_class}"
         )

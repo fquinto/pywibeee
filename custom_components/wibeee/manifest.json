@@ -1,9 +1,6 @@
 {
   "domain": "wibeee",
   "name": "Wibeee Energy Monitor",
-  "after_dependencies": [
-    "network"
-  ],
   "codeowners": [
     "@fquinto"
   ],
@@ -17,11 +14,12 @@
     }
   ],
   "documentation": "https://github.com/fquinto/pywibeee",
-  "homeassistant": "2025.1.0",
+  "homeassistant": "2024.1.0",
+  "integration_type": "device",
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/fquinto/pywibeee/issues",
   "requirements": [
-    "xmltodict>=0.13.0"
+    "pywibeee==0.1.1"
   ],
   "version": "1.2.0"
 }

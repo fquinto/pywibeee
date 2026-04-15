@@ -4,6 +4,41 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## Library 0.1.1 (2026)
+
+### Changed — CLI Library (`pywibeee/`)
+
+* **BREAKING**: All public methods and attributes renamed from camelCase to snake_case:
+  * `getIp()` → `get_ip()`, `getSubnet()` → `get_subnet()`, `checkSubnetOpenPort()` → `check_subnet_open_port()`
+  * `autodiscoverAsync()` → `autodiscover_async()`
+  * `getStatus()` → `get_status()`, `getStatusAsync()` → `get_status_async()`
+  * `getDeviceName()` → `get_device_name()`, `getDeviceNameAsync()` → `get_device_name_async()`
+  * `asyncCall()` → `async_call()`, `callurlAsync()` → `callurl_async()`
+  * `setPort()` → `set_port()`, `setTimeout()` → `set_timeout()`, `setOutputFormat()` → `set_output_format()`
+  * `getInfo()` → `get_info()`, `getInfoAsync()` → `get_info_async()`
+  * `outputJsonParam()` → `output_json_param()`, `outputStatus()` → `output_status()`, `outputAction()` → `output_action()`
+  * `getModel()` → `get_model()`, `getModelAsync()` → `get_model_async()`
+  * `getModelWeb()` → `get_model_web()`, `getModelWebAsync()` → `get_model_web_async()`
+  * `getModelDescription()` → `get_model_description()`, `getTimeData()` → `get_time_data()`
+  * `getVersion()` → `get_version()`, `readBackupPosition()` → `read_backup_position()`
+  * `rebootWeb()` → `reboot_web()`, `rebootWebAsync()` → `reboot_web_async()`
+  * `resetEnergy()` → `reset_energy()`, `resetEnergyAsync()` → `reset_energy_async()`
+  * `configureServer()` → `configure_server()`, `configureServerAsync()` → `configure_server_async()`
+  * `doCmd()` → `do_cmd()`, `getSensors()` → `get_sensors()`, `getParameterXML()` → `get_parameter_xml()`
+  * Attributes: `modelDescription` → `model_description`, `deviceName` → `device_name`, `actionName` → `action_name`, `_useAsync` → `_use_async`
+  * Parameters: `printTxt` → `print_txt`, `oldData` → `old_data`
+
+### Fixed — CLI Library (`pywibeee/`)
+
+* Fixed import order: standard library imports now come before third-party and first-party imports (C0411).
+* Replaced broad `except Exception` with specific exceptions: `OSError` for socket/network errors, `ElementTree.ParseError` and `xmltodict.expat.ExpatError` for XML parsing (W0718).
+* Removed unused variables: `idx` in loop iterations, unused `port` unpacking, unused `r` return values (W0612).
+* Added `encoding='utf-8'` to all `open()` calls and switched to `with` statements for proper file handling (W1514).
+* Removed unused `param` and `value` arguments from `output_status()` (W0613).
+* Added docstring to `get_or_create_eventloop()` (C0116).
+* Moved `datetime` import to top-level instead of inside `get_time_data()` (C0415).
+* Fixed unnecessary negation patterns: `not('Error:' in x)` → `'Error:' not in x` (C0117, C0325).
+
 ## Integration 1.2.0 / Library 0.1.0 (2026)
 
 ### Added — Home Assistant Integration (`custom_components/wibeee/`)

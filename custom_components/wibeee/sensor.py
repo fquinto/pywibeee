@@ -40,6 +40,9 @@ from .coordinator import WibeeeCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
+# Coordinator-based: no per-entity parallel updates needed.
+PARALLEL_UPDATES = 0
+
 # Map phase names to human-readable labels
 PHASE_NAMES: dict[str, str] = {
     "fase1": "L1",

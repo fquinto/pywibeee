@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from datetime import timedelta
+from typing import Any
 
 import aiohttp
 import voluptuous as vol
@@ -43,7 +44,9 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 
-async def validate_input(hass: HomeAssistant, user_input: dict):
+async def validate_input(
+    hass: HomeAssistant, user_input: dict[str, str]
+) -> tuple[str, str, dict[str, str]]:
     """Validate the user input and fetch device info.
 
     Returns (title, unique_id, data_dict).
@@ -173,7 +176,7 @@ class WibeeeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     def __init__(self) -> None:
         """Initialize the config flow."""
-        self._user_data: dict = {}
+        self._user_data: dict[str, str] = {}
         self._discovered_host: str | None = None
 
     async def async_step_dhcp(
@@ -210,7 +213,9 @@ class WibeeeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._discovered_host = host
         return await self.async_step_user()
 
-    async def async_step_user(self, user_input=None):
+    async def async_step_user(
+        self, user_input: dict[str, str] | None = None
+    ) -> config_entries.ConfigFlowResult:
         """Step 1: User enters the device IP (or confirms discovered IP)."""
         errors: dict[str, str] = {}
 
@@ -253,7 +258,9 @@ class WibeeeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def async_step_mode(self, user_input=None):
+    async def async_step_mode(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
         """Step 2: Choose update mode (polling or local push)."""
         errors: dict[str, str] = {}
 
@@ -331,9 +338,49 @@ class WibeeeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     @staticmethod
     @callback
-    def async_get_options_flow(config_entry):
+    def async_get_options_flow(
+        config_entry: config_entries.ConfigEntry,
+    ) -> WibeeeOptionsFlowHandler:
         """Get the options flow handler."""
         return WibeeeOptionsFlowHandler()
+
+    async def async_step_reconfigure(
+        self, user_input: dict | None = None
+    ) -> config_entries.ConfigFlowResult:
+        """Handle reconfiguration of the device host."""
+        errors: dict[str, str] = {}
+        reconfigure_entry = self._get_reconfigure_entry()
+
+        if user_input is not None:
+            try:
+                title, unique_id, data = await validate_input(self.hass, user_input)
+                await self.async_set_unique_id(unique_id)
+                self._abort_if_unique_id_mismatch(reason="wrong_device")
+
+                return self.async_update_reload_and_abort(
+                    reconfigure_entry,
+                    data_updates=data,
+                )
+            except AbortFlow:
+                raise
+            except NoDeviceInfo:
+                errors[CONF_HOST] = "no_device_info"
+            except Exception:
+                _LOGGER.exception("Unexpected exception during reconfigure")
+                errors["base"] = "unknown"
+
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        CONF_HOST,
+                        default=reconfigure_entry.data.get(CONF_HOST, ""),
+                    ): str,
+                }
+            ),
+            errors=errors,
+        )
 
 
 class WibeeeOptionsFlowHandler(config_entries.OptionsFlow):
@@ -343,7 +390,9 @@ class WibeeeOptionsFlowHandler(config_entries.OptionsFlow):
     and configuring polling interval or auto-configuring push.
     """
 
-    async def async_step_init(self, user_input=None):
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
         """Main options step."""
         errors: dict[str, str] = {}
         options = dict(self.config_entry.options)

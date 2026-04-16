@@ -22,17 +22,21 @@ from homeassistant.components.button import (
 )
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import WibeeeConfigEntry
-from .api import WibeeeAPI
+from .api import WibeeeAPI, WibeeeDeviceInfo
 from .const import (
     DOMAIN,
     KNOWN_MODELS,
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+# Only one button action at a time to avoid overwhelming the device.
+PARALLEL_UPDATES = 1
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -54,7 +58,6 @@ BUTTON_TYPES: tuple[WibeeeButtonEntityDescription, ...] = (
         key="reset_energy",
         translation_key="reset_energy",
         entity_category=EntityCategory.CONFIG,
-        icon="mdi:counter",
         method="async_reset_energy",
     ),
 )
@@ -96,7 +99,7 @@ class WibeeeButton(ButtonEntity):
     def __init__(
         self,
         api: WibeeeAPI,
-        device_info,
+        device_info: WibeeeDeviceInfo,
         description: WibeeeButtonEntityDescription,
     ) -> None:
         """Initialize the button entity."""
@@ -127,8 +130,7 @@ class WibeeeButton(ButtonEntity):
                 self.entity_description.key,
             )
         else:
-            _LOGGER.error(
-                "Wibeee %s: %s failed",
-                self._attr_unique_id,
-                self.entity_description.key,
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key=f"{self.entity_description.key}_failed",
             )

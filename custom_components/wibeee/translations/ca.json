@@ -8,6 +8,13 @@
           "host": "Nom de host o adre\u00e7a IP"
         }
       },
+      "reconfigure": {
+        "title": "Reconfigurar dispositiu Wibeee",
+        "description": "Actualitza l'adreça IP del teu monitor d'energia Wibeee.",
+        "data": {
+          "host": "Nom de host o adreça IP"
+        }
+      },
       "mode": {
         "title": "Mode d'actualitzaci\u00f3",
         "description": "Tria com rep dades la integraci\u00f3 des del dispositiu.",
@@ -23,7 +30,8 @@
     },
     "abort": {
       "already_configured": "El dispositiu ja est\u00e0 configurat",
-      "not_wibeee_device": "El dispositiu descobert no \u00e9s un monitor d'energia Wibeee"
+      "not_wibeee_device": "El dispositiu descobert no \u00e9s un monitor d'energia Wibeee",
+      "wrong_device": "El dispositiu en aquesta adre\u00e7a t\u00e9 una adre\u00e7a MAC diferent al que s'est\u00e0 reconfigurant"
     },
     "error": {
       "no_device_info": "No s'ha pogut connectar al dispositiu Wibeee. Verifica l'adre\u00e7a IP i que el dispositiu estigui enc\u00e8s.",
@@ -47,6 +55,14 @@
           "auto_configure": "Configurar autom\u00e0ticament el WiBeee per enviar dades a aquesta inst\u00e0ncia de Home Assistant."
         }
       }
+    }
+  },
+  "exceptions": {
+    "reboot_failed": {
+      "message": "No s'ha pogut reiniciar el dispositiu Wibeee. Comprova que el dispositiu és accessible."
+    },
+    "reset_energy_failed": {
+      "message": "No s'han pogut reiniciar els comptadors d'energia del Wibeee. Comprova que el dispositiu és accessible."
     }
   },
   "entity": {

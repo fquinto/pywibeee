@@ -8,6 +8,13 @@
           "host": "Nombre de host o direcci\u00f3n IP"
         }
       },
+      "reconfigure": {
+        "title": "Reconfigurar dispositivo Wibeee",
+        "description": "Actualiza la dirección IP de tu monitor de energía Wibeee.",
+        "data": {
+          "host": "Nombre de host o dirección IP"
+        }
+      },
       "mode": {
         "title": "Modo de actualizaci\u00f3n",
         "description": "Elige c\u00f3mo recibe datos la integraci\u00f3n desde el dispositivo.",
@@ -23,7 +30,8 @@
     },
     "abort": {
       "already_configured": "El dispositivo ya est\u00e1 configurado",
-      "not_wibeee_device": "El dispositivo descubierto no es un monitor de energ\u00eda Wibeee"
+      "not_wibeee_device": "El dispositivo descubierto no es un monitor de energ\u00eda Wibeee",
+      "wrong_device": "El dispositivo en esta direcci\u00f3n tiene una direcci\u00f3n MAC diferente al que se est\u00e1 reconfigurando"
     },
     "error": {
       "no_device_info": "No se pudo conectar al dispositivo Wibeee. Verifica la direcci\u00f3n IP y que el dispositivo est\u00e9 encendido.",
@@ -47,6 +55,14 @@
           "auto_configure": "Configurar autom\u00e1ticamente el WiBeee para que env\u00ede datos a esta instancia de Home Assistant."
         }
       }
+    }
+  },
+  "exceptions": {
+    "reboot_failed": {
+      "message": "No se pudo reiniciar el dispositivo Wibeee. Comprueba que el dispositivo es accesible."
+    },
+    "reset_energy_failed": {
+      "message": "No se pudieron resetear los contadores de energía del Wibeee. Comprueba que el dispositivo es accesible."
     }
   },
   "entity": {

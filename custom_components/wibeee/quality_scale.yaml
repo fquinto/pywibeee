@@ -39,9 +39,7 @@ rules:
   entity-unavailable: done
   integration-owner: done
   log-when-unavailable: done
-  parallel-updates:
-    status: todo
-    comment: PARALLEL_UPDATES not yet set in platform modules.
+  parallel-updates: done
   reauthentication-flow:
     status: exempt
     comment: Device uses unauthenticated local HTTP; no credentials to re-auth.
@@ -49,12 +47,8 @@ rules:
 
   # Gold
   devices: done
-  diagnostics:
-    status: todo
-    comment: diagnostics.py not yet implemented.
-  discovery-update-info:
-    status: todo
-    comment: DHCP discovery info not yet used to update device network config.
+  diagnostics: done
+  discovery-update-info: done
   discovery: done
   docs-data-update:
     status: todo
@@ -80,19 +74,11 @@ rules:
     comment: Device phases are fixed hardware; no dynamic device addition.
   entity-category: done
   entity-device-class: done
-  entity-disabled-by-default:
-    status: todo
-    comment: THD harmonic sensors could be disabled by default.
+  entity-disabled-by-default: done
   entity-translations: done
-  exception-translations:
-    status: todo
-    comment: Exception messages not yet translatable.
-  icon-translations:
-    status: todo
-    comment: Icons are hardcoded, not using icon translations.
-  reconfiguration-flow:
-    status: todo
-    comment: async_step_reconfigure not yet implemented.
+  exception-translations: done
+  icon-translations: done
+  reconfiguration-flow: done
   repair-issues:
     status: exempt
     comment: No known scenarios requiring repair flows.
@@ -105,6 +91,4 @@ rules:
   inject-websession:
     status: done
     comment: aiohttp session is passed from HA to the API client.
-  strict-typing:
-    status: todo
-    comment: No py.typed marker or full type annotations yet.
+  strict-typing: done

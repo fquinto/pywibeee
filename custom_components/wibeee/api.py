@@ -67,15 +67,11 @@ class WibeeeAPI:
         """Return the base URL for the device."""
         return f"http://{self.host}:{self.port}"
 
-    async def async_fetch_url(
-        self, url: str, retries: int = 0
-    ) -> str | None:
+    async def async_fetch_url(self, url: str, retries: int = 0) -> str | None:
         """Fetch a URL with optional retries, returning text content."""
         for attempt in range(retries + 1):
             try:
-                async with self.session.get(
-                    url, timeout=self.timeout
-                ) as resp:
+                async with self.session.get(url, timeout=self.timeout) as resp:
                     if resp.status == 200:
                         return await resp.text()
                     _LOGGER.warning(
@@ -101,9 +97,7 @@ class WibeeeAPI:
         _LOGGER.error("Failed to fetch %s after %d attempts", url, retries + 1)
         return None
 
-    async def async_fetch_status(
-        self, retries: int = 2
-    ) -> dict[str, Any] | None:
+    async def async_fetch_status(self, retries: int = 2) -> dict[str, Any] | None:
         """Fetch status.xml and return parsed sensor data.
 
         Returns a dict like:
@@ -197,9 +191,7 @@ class WibeeeAPI:
             return root.findtext("id")
         return None
 
-    async def _fetch_mac_address(
-        self, wibeee_id: str, retries: int = 2
-    ) -> str | None:
+    async def _fetch_mac_address(self, wibeee_id: str, retries: int = 2) -> str | None:
         """Fetch MAC address from values.xml."""
         mac = await self._fetch_value(wibeee_id, "macAddr", retries=retries)
         if mac:
@@ -210,10 +202,7 @@ class WibeeeAPI:
         self, wibeee_id: str, var_name: str, retries: int = 2
     ) -> str | None:
         """Fetch a single variable value from the device."""
-        url = (
-            f"{self.base_url}/services/user/values.xml"
-            f"?var={wibeee_id}.{var_name}"
-        )
+        url = f"{self.base_url}/services/user/values.xml?var={wibeee_id}.{var_name}"
         text = await self.async_fetch_url(url, retries=retries)
         if not text:
             return None
@@ -237,9 +226,7 @@ class WibeeeAPI:
         available in status.xml.
         """
         # Login first with device default credentials
-        login_url = (
-            f"{self.base_url}/en/loginRedirect.html?user=user&pwd=user"
-        )
+        login_url = f"{self.base_url}/en/loginRedirect.html?user=user&pwd=user"
         await self.async_fetch_url(login_url, retries=0)
 
         # Then get the index page which contains the model in JavaScript
@@ -350,9 +337,7 @@ class WibeeeAPI:
         )
         result = await self.async_fetch_url(url, retries=2)
         if result is None:
-            _LOGGER.error(
-                "Failed to configure push server on WiBeee %s", self.host
-            )
+            _LOGGER.error("Failed to configure push server on WiBeee %s", self.host)
             return False
 
         # Reset the device to apply changes
@@ -379,12 +364,8 @@ class WibeeeAPI:
         if not wibeee_id:
             wibeee_id = "WIBEEE"
 
-        server_ip = await self._fetch_value(
-            wibeee_id, "serverIP", retries=1
-        )
-        server_port_hex = await self._fetch_value(
-            wibeee_id, "serverPort", retries=1
-        )
+        server_ip = await self._fetch_value(wibeee_id, "serverIP", retries=1)
+        server_port_hex = await self._fetch_value(wibeee_id, "serverPort", retries=1)
 
         if server_ip and server_port_hex:
             try:
@@ -397,3 +378,47 @@ class WibeeeAPI:
             }
 
         return None
+
+    async def async_fetch_device_diagnostics(self) -> dict[str, Any]:
+        """Fetch device configuration variables for diagnostics.
+
+        Reads values.xml variables documented by the manufacturer that
+        provide insight into the device's configuration and state.
+        Sensitive fields (IP, MAC, WiFi credentials) are excluded;
+        those are redacted at the diagnostics layer.
+        """
+        wibeee_id = await self._fetch_device_id(retries=1)
+        if not wibeee_id:
+            wibeee_id = "WIBEEE"
+
+        diag_vars = [
+            "connectionType",
+            "phasesSequence",
+            "harmonics",
+            "softVersion",
+            "model",
+            "ipType",
+            "networkType",
+            "spiFlashId",
+            "leapThreshold",
+            "clampsModel",
+            "scale",
+            "measuresRefresh",
+            "appRefresh",
+            "HDataSaveRefresh",
+        ]
+
+        result: dict[str, Any] = {}
+        for var_name in diag_vars:
+            value = await self._fetch_value(wibeee_id, var_name, retries=1)
+            if value is not None:
+                result[var_name] = value
+
+        # Also fetch status.xml extras (scale, coilStatus, ground, time)
+        status = await self.async_fetch_status(retries=1)
+        if status:
+            for key in ("scale", "coilStatus", "ground", "time"):
+                if key in status:
+                    result[f"status_{key}"] = status[key]
+
+        return result

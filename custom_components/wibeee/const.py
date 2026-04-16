@@ -98,7 +98,6 @@ SENSOR_TYPES: dict[str, WibeeeSensorEntityDescription] = {
         native_unit_of_measurement=UnitOfElectricPotential.VOLT,
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:sine-wave",
     ),
     "irms": WibeeeSensorEntityDescription(
         key="irms",
@@ -106,7 +105,6 @@ SENSOR_TYPES: dict[str, WibeeeSensorEntityDescription] = {
         native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:flash-auto",
     ),
     "p_aparent": WibeeeSensorEntityDescription(
         key="p_aparent",
@@ -114,7 +112,6 @@ SENSOR_TYPES: dict[str, WibeeeSensorEntityDescription] = {
         native_unit_of_measurement=UnitOfApparentPower.VOLT_AMPERE,
         device_class=SensorDeviceClass.APPARENT_POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:flash-circle",
     ),
     "p_activa": WibeeeSensorEntityDescription(
         key="p_activa",
@@ -122,7 +119,6 @@ SENSOR_TYPES: dict[str, WibeeeSensorEntityDescription] = {
         native_unit_of_measurement=UnitOfPower.WATT,
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:flash",
     ),
     "p_reactiva_ind": WibeeeSensorEntityDescription(
         key="p_reactiva_ind",
@@ -130,7 +126,6 @@ SENSOR_TYPES: dict[str, WibeeeSensorEntityDescription] = {
         native_unit_of_measurement=UnitOfReactivePower.VOLT_AMPERE_REACTIVE,
         device_class=SensorDeviceClass.REACTIVE_POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:flash-outline",
     ),
     "p_reactiva_cap": WibeeeSensorEntityDescription(
         key="p_reactiva_cap",
@@ -138,7 +133,7 @@ SENSOR_TYPES: dict[str, WibeeeSensorEntityDescription] = {
         native_unit_of_measurement=UnitOfReactivePower.VOLT_AMPERE_REACTIVE,
         device_class=SensorDeviceClass.REACTIVE_POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:flash-outline",
+        entity_registry_enabled_default=False,
     ),
     "frecuencia": WibeeeSensorEntityDescription(
         key="frecuencia",
@@ -146,7 +141,6 @@ SENSOR_TYPES: dict[str, WibeeeSensorEntityDescription] = {
         native_unit_of_measurement=UnitOfFrequency.HERTZ,
         device_class=SensorDeviceClass.FREQUENCY,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:current-ac",
     ),
     "factor_potencia": WibeeeSensorEntityDescription(
         key="factor_potencia",
@@ -154,7 +148,6 @@ SENSOR_TYPES: dict[str, WibeeeSensorEntityDescription] = {
         native_unit_of_measurement=None,
         device_class=SensorDeviceClass.POWER_FACTOR,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:math-cos",
     ),
     "energia_activa": WibeeeSensorEntityDescription(
         key="energia_activa",
@@ -162,7 +155,6 @@ SENSOR_TYPES: dict[str, WibeeeSensorEntityDescription] = {
         native_unit_of_measurement=UnitOfEnergy.WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:pulse",
     ),
     "energia_reactiva_ind": WibeeeSensorEntityDescription(
         key="energia_reactiva_ind",
@@ -170,7 +162,6 @@ SENSOR_TYPES: dict[str, WibeeeSensorEntityDescription] = {
         native_unit_of_measurement="varh",
         device_class=None,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:alpha-e-circle-outline",
     ),
     "energia_reactiva_cap": WibeeeSensorEntityDescription(
         key="energia_reactiva_cap",
@@ -178,7 +169,7 @@ SENSOR_TYPES: dict[str, WibeeeSensorEntityDescription] = {
         native_unit_of_measurement="varh",
         device_class=None,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:alpha-e-circle-outline",
+        entity_registry_enabled_default=False,
     ),
     "angle": WibeeeSensorEntityDescription(
         key="angle",
@@ -186,7 +177,7 @@ SENSOR_TYPES: dict[str, WibeeeSensorEntityDescription] = {
         native_unit_of_measurement=DEGREE,
         device_class=None,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:angle-acute",
+        entity_registry_enabled_default=False,
     ),
     "thd_total": WibeeeSensorEntityDescription(
         key="thd_total",
@@ -194,7 +185,7 @@ SENSOR_TYPES: dict[str, WibeeeSensorEntityDescription] = {
         native_unit_of_measurement=PERCENTAGE,
         device_class=None,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:chart-bubble",
+        entity_registry_enabled_default=False,
     ),
     "thd_fund": WibeeeSensorEntityDescription(
         key="thd_fund",
@@ -202,7 +193,7 @@ SENSOR_TYPES: dict[str, WibeeeSensorEntityDescription] = {
         native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:vector-point",
+        entity_registry_enabled_default=False,
     ),
     "thd_ar3": WibeeeSensorEntityDescription(
         key="thd_ar3",
@@ -210,7 +201,7 @@ SENSOR_TYPES: dict[str, WibeeeSensorEntityDescription] = {
         native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:numeric-3",
+        entity_registry_enabled_default=False,
     ),
     "thd_ar5": WibeeeSensorEntityDescription(
         key="thd_ar5",
@@ -218,7 +209,7 @@ SENSOR_TYPES: dict[str, WibeeeSensorEntityDescription] = {
         native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:numeric-5",
+        entity_registry_enabled_default=False,
     ),
     "thd_ar7": WibeeeSensorEntityDescription(
         key="thd_ar7",
@@ -226,7 +217,7 @@ SENSOR_TYPES: dict[str, WibeeeSensorEntityDescription] = {
         native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:numeric-7",
+        entity_registry_enabled_default=False,
     ),
     "thd_ar9": WibeeeSensorEntityDescription(
         key="thd_ar9",
@@ -234,7 +225,7 @@ SENSOR_TYPES: dict[str, WibeeeSensorEntityDescription] = {
         native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:numeric-9",
+        entity_registry_enabled_default=False,
     ),
     "thd_tot_V": WibeeeSensorEntityDescription(
         key="thd_tot_V",
@@ -242,7 +233,7 @@ SENSOR_TYPES: dict[str, WibeeeSensorEntityDescription] = {
         native_unit_of_measurement=PERCENTAGE,
         device_class=None,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:chart-bubble",
+        entity_registry_enabled_default=False,
     ),
     "thd_fun_V": WibeeeSensorEntityDescription(
         key="thd_fun_V",
@@ -250,7 +241,7 @@ SENSOR_TYPES: dict[str, WibeeeSensorEntityDescription] = {
         native_unit_of_measurement=UnitOfElectricPotential.VOLT,
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:vector-point",
+        entity_registry_enabled_default=False,
     ),
     "thd_ar3_V": WibeeeSensorEntityDescription(
         key="thd_ar3_V",
@@ -258,7 +249,7 @@ SENSOR_TYPES: dict[str, WibeeeSensorEntityDescription] = {
         native_unit_of_measurement=UnitOfElectricPotential.VOLT,
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:numeric-3",
+        entity_registry_enabled_default=False,
     ),
     "thd_ar5_V": WibeeeSensorEntityDescription(
         key="thd_ar5_V",
@@ -266,7 +257,7 @@ SENSOR_TYPES: dict[str, WibeeeSensorEntityDescription] = {
         native_unit_of_measurement=UnitOfElectricPotential.VOLT,
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:numeric-5",
+        entity_registry_enabled_default=False,
     ),
     "thd_ar7_V": WibeeeSensorEntityDescription(
         key="thd_ar7_V",
@@ -274,7 +265,7 @@ SENSOR_TYPES: dict[str, WibeeeSensorEntityDescription] = {
         native_unit_of_measurement=UnitOfElectricPotential.VOLT,
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:numeric-7",
+        entity_registry_enabled_default=False,
     ),
     "thd_ar9_V": WibeeeSensorEntityDescription(
         key="thd_ar9_V",
@@ -282,6 +273,6 @@ SENSOR_TYPES: dict[str, WibeeeSensorEntityDescription] = {
         native_unit_of_measurement=UnitOfElectricPotential.VOLT,
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:numeric-9",
+        entity_registry_enabled_default=False,
     ),
 }

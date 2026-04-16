@@ -1,0 +1,110 @@
+rules:
+  # Bronze
+  action-setup:
+    status: exempt
+    comment: This integration does not provide service actions.
+  appropriate-polling: done
+  brands:
+    status: todo
+    comment: Branding assets not yet submitted to home-assistant/brands.
+  common-modules: done
+  config-flow-test-coverage: done
+  config-flow: done
+  dependency-transparency: done
+  docs-actions:
+    status: exempt
+    comment: This integration does not provide service actions.
+  docs-high-level-description: done
+  docs-installation-instructions: done
+  docs-removal-instructions:
+    status: todo
+    comment: Removal instructions not yet in docs.
+  entity-event-setup: done
+  entity-unique-id: done
+  has-entity-name: done
+  runtime-data: done
+  test-before-configure: done
+  test-before-setup: done
+  unique-config-entry: done
+
+  # Silver
+  action-exceptions:
+    status: exempt
+    comment: This integration does not provide service actions.
+  config-entry-unloading: done
+  docs-configuration-parameters:
+    status: todo
+    comment: Options flow parameters not yet documented.
+  docs-installation-parameters: done
+  entity-unavailable: done
+  integration-owner: done
+  log-when-unavailable: done
+  parallel-updates:
+    status: todo
+    comment: PARALLEL_UPDATES not yet set in platform modules.
+  reauthentication-flow:
+    status: exempt
+    comment: Device uses unauthenticated local HTTP; no credentials to re-auth.
+  test-coverage: done
+
+  # Gold
+  devices: done
+  diagnostics:
+    status: todo
+    comment: diagnostics.py not yet implemented.
+  discovery-update-info:
+    status: todo
+    comment: DHCP discovery info not yet used to update device network config.
+  discovery: done
+  docs-data-update:
+    status: todo
+    comment: Push vs polling data update mechanism not yet documented in detail.
+  docs-examples:
+    status: todo
+    comment: No automation examples in docs yet.
+  docs-known-limitations:
+    status: todo
+    comment: Known limitations not yet documented.
+  docs-supported-devices: done
+  docs-supported-functions:
+    status: todo
+    comment: Full entity/platform list not yet in docs.
+  docs-troubleshooting:
+    status: todo
+    comment: No troubleshooting section in docs yet.
+  docs-use-cases:
+    status: todo
+    comment: No use case examples in docs yet.
+  dynamic-devices:
+    status: exempt
+    comment: Device phases are fixed hardware; no dynamic device addition.
+  entity-category: done
+  entity-device-class: done
+  entity-disabled-by-default:
+    status: todo
+    comment: THD harmonic sensors could be disabled by default.
+  entity-translations: done
+  exception-translations:
+    status: todo
+    comment: Exception messages not yet translatable.
+  icon-translations:
+    status: todo
+    comment: Icons are hardcoded, not using icon translations.
+  reconfiguration-flow:
+    status: todo
+    comment: async_step_reconfigure not yet implemented.
+  repair-issues:
+    status: exempt
+    comment: No known scenarios requiring repair flows.
+  stale-devices:
+    status: exempt
+    comment: Devices correspond to fixed hardware phases; no stale device scenario.
+
+  # Platinum
+  async-dependency: done
+  inject-websession:
+    status: done
+    comment: aiohttp session is passed from HA to the API client.
+  strict-typing:
+    status: todo
+    comment: No py.typed marker or full type annotations yet.

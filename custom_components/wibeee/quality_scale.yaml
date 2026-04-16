@@ -4,9 +4,7 @@ rules:
     status: exempt
     comment: This integration does not provide service actions.
   appropriate-polling: done
-  brands:
-    status: todo
-    comment: Branding assets not yet submitted to home-assistant/brands.
+  brands: done
   common-modules: done
   config-flow-test-coverage: done
   config-flow: done

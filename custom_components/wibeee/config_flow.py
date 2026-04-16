@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import timedelta
 
+import aiohttp
 import voluptuous as vol
 from homeassistant import config_entries, exceptions
 from homeassistant.const import CONF_HOST
@@ -48,9 +50,7 @@ async def validate_input(hass: HomeAssistant, user_input: dict):
     Raises NoDeviceInfo if the device cannot be reached.
     """
     session = async_get_clientsession(hass)
-    api = WibeeeAPI(
-        session, user_input[CONF_HOST], timeout=timedelta(seconds=5)
-    )
+    api = WibeeeAPI(session, user_input[CONF_HOST], timeout=timedelta(seconds=5))
 
     # First check if it's a Wibeee device
     try:
@@ -59,13 +59,13 @@ async def validate_input(hass: HomeAssistant, user_input: dict):
             raise NoDeviceInfo("Device did not respond as a Wibeee")
     except NoDeviceInfo:
         raise
-    except Exception as exc:
+    except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
         raise NoDeviceInfo(f"Cannot connect: {exc}") from exc
 
     # Fetch device info
     try:
         device = await api.async_fetch_device_info(retries=3)
-    except Exception as exc:
+    except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
         raise NoDeviceInfo(f"Cannot get device info: {exc}") from exc
 
     if device is None:
@@ -74,11 +74,15 @@ async def validate_input(hass: HomeAssistant, user_input: dict):
     unique_id = device.mac_addr_formatted
     name = f"Wibeee {device.mac_addr_short}"
 
-    return name, unique_id, {
-        CONF_HOST: user_input[CONF_HOST],
-        CONF_MAC_ADDRESS: device.mac_addr_formatted,
-        CONF_WIBEEE_ID: device.wibeee_id,
-    }
+    return (
+        name,
+        unique_id,
+        {
+            CONF_HOST: user_input[CONF_HOST],
+            CONF_MAC_ADDRESS: device.mac_addr_formatted,
+            CONF_WIBEEE_ID: device.wibeee_id,
+        },
+    )
 
 
 def _get_local_ip_sync() -> str:
@@ -200,7 +204,7 @@ class WibeeeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             is_wibeee = await api.async_check_connection()
             if not is_wibeee:
                 return self.async_abort(reason="not_wibeee_device")
-        except Exception:
+        except (aiohttp.ClientError, asyncio.TimeoutError):
             return self.async_abort(reason="no_device_info")
 
         self._discovered_host = host
@@ -216,9 +220,7 @@ class WibeeeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             try:
-                title, unique_id, data = await validate_input(
-                    self.hass, user_input
-                )
+                title, unique_id, data = await validate_input(self.hass, user_input)
                 await self.async_set_unique_id(unique_id)
                 self._abort_if_unique_id_configured(updates=user_input)
 
@@ -237,10 +239,7 @@ class WibeeeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 _LOGGER.exception("Unexpected exception during setup")
                 errors["base"] = "unknown"
 
-        default_host = (
-            (user_input or {}).get(CONF_HOST)
-            or self._discovered_host
-        )
+        default_host = (user_input or {}).get(CONF_HOST) or self._discovered_host
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema(
@@ -273,19 +272,21 @@ class WibeeeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         self._user_data[CONF_HOST],
                         timeout=timedelta(seconds=15),
                     )
-                    success = await api.async_configure_push_server(
-                        local_ip, ha_port
-                    )
+                    success = await api.async_configure_push_server(local_ip, ha_port)
                     if not success:
                         errors["base"] = "auto_configure_failed"
                     else:
-                        _LOGGER.info(
+                        _LOGGER.debug(
                             "Auto-configured WiBeee to push to %s:%d",
                             local_ip,
                             ha_port,
                         )
-                except Exception:
-                    _LOGGER.exception("Failed to auto-configure WiBeee")
+                except (aiohttp.ClientError, asyncio.TimeoutError, OSError):
+                    _LOGGER.debug(
+                        "Failed to auto-configure WiBeee at %s",
+                        self._user_data[CONF_HOST],
+                        exc_info=True,
+                    )
                     errors["base"] = "auto_configure_failed"
 
             if not errors:
@@ -322,9 +323,7 @@ class WibeeeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             mode=SelectSelectorMode.DROPDOWN,
                         )
                     ),
-                    vol.Optional(
-                        CONF_AUTO_CONFIGURE, default=True
-                    ): BooleanSelector(),
+                    vol.Optional(CONF_AUTO_CONFIGURE, default=True): BooleanSelector(),
                 }
             ),
             errors=errors,
@@ -365,13 +364,15 @@ class WibeeeOptionsFlowHandler(config_entries.OptionsFlow):
                         self.config_entry.data[CONF_HOST],
                         timeout=timedelta(seconds=15),
                     )
-                    success = await api.async_configure_push_server(
-                        local_ip, ha_port
-                    )
+                    success = await api.async_configure_push_server(local_ip, ha_port)
                     if not success:
                         errors["base"] = "auto_configure_failed"
-                except Exception:
-                    _LOGGER.exception("Failed to auto-configure WiBeee")
+                except (aiohttp.ClientError, asyncio.TimeoutError, OSError):
+                    _LOGGER.debug(
+                        "Failed to auto-configure WiBeee at %s",
+                        self.config_entry.data[CONF_HOST],
+                        exc_info=True,
+                    )
                     errors["base"] = "auto_configure_failed"
 
             if not errors:
@@ -381,15 +382,11 @@ class WibeeeOptionsFlowHandler(config_entries.OptionsFlow):
                         CONF_SCAN_INTERVAL,
                         int(DEFAULT_SCAN_INTERVAL.total_seconds()),
                     )
-                return self.async_create_entry(
-                    title="", data=new_options
-                )
+                return self.async_create_entry(title="", data=new_options)
 
         # Build schema dynamically based on current mode
         schema_dict = {
-            vol.Required(
-                CONF_UPDATE_MODE, default=current_mode
-            ): SelectSelector(
+            vol.Required(CONF_UPDATE_MODE, default=current_mode): SelectSelector(
                 SelectSelectorConfig(
                     options=[
                         SelectOptionDict(
@@ -425,9 +422,9 @@ class WibeeeOptionsFlowHandler(config_entries.OptionsFlow):
         )
 
         # Show auto-configure option for local push
-        schema_dict[
-            vol.Optional(CONF_AUTO_CONFIGURE, default=False)
-        ] = BooleanSelector()
+        schema_dict[vol.Optional(CONF_AUTO_CONFIGURE, default=False)] = (
+            BooleanSelector()
+        )
 
         return self.async_show_form(
             step_id="init",

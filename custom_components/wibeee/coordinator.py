@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Mapping
 from datetime import timedelta
 from xml.etree.ElementTree import ParseError as XMLParseError
 
@@ -25,7 +26,7 @@ from .api import WibeeeAPI
 _LOGGER = logging.getLogger(__name__)
 
 # Type alias: phase_key -> sensor_key -> value
-WibeeeData = dict[str, dict[str, str]]
+WibeeeData = Mapping[str, Mapping[str, str]]
 
 
 class WibeeeCoordinator(DataUpdateCoordinator[WibeeeData]):

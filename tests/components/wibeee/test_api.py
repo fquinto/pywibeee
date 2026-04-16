@@ -129,14 +129,14 @@ class TestAsyncFetchUrl:
     @pytest.mark.asyncio
     async def test_success(self) -> None:
         session = _make_session([_make_response(200, "OK")])
-        api = WibeeeAPI(session, "192.168.1.30")
-        result = await api.async_fetch_url("http://192.168.1.30/test")
+        api = WibeeeAPI(session, "192.168.1.150")
+        result = await api.async_fetch_url("http://192.168.1.150/test")
         assert result == "OK"
 
     @pytest.mark.asyncio
     async def test_http_error_no_retry(self) -> None:
         session = _make_session([_make_response(500, "error")])
-        api = WibeeeAPI(session, "192.168.1.30")
+        api = WibeeeAPI(session, "192.168.1.150")
         result = await api.async_fetch_url("http://x/test", retries=0)
         assert result is None
 
@@ -148,7 +148,7 @@ class TestAsyncFetchUrl:
                 _make_response(200, "OK"),
             ]
         )
-        api = WibeeeAPI(session, "192.168.1.30")
+        api = WibeeeAPI(session, "192.168.1.150")
         result = await api.async_fetch_url("http://x/test", retries=1)
         assert result == "OK"
 
@@ -158,7 +158,7 @@ class TestAsyncFetchUrl:
         resp.__aenter__ = AsyncMock(side_effect=aiohttp.ClientError("conn failed"))
         resp.__aexit__ = AsyncMock(return_value=False)
         session = _make_session([resp])
-        api = WibeeeAPI(session, "192.168.1.30")
+        api = WibeeeAPI(session, "192.168.1.150")
         result = await api.async_fetch_url("http://x/test", retries=0)
         assert result is None
 
@@ -168,7 +168,7 @@ class TestAsyncFetchUrl:
         resp.__aenter__ = AsyncMock(side_effect=asyncio.TimeoutError())
         resp.__aexit__ = AsyncMock(return_value=False)
         session = _make_session([resp])
-        api = WibeeeAPI(session, "192.168.1.30")
+        api = WibeeeAPI(session, "192.168.1.150")
         result = await api.async_fetch_url("http://x/test", retries=0)
         assert result is None
 
@@ -182,7 +182,7 @@ class TestAsyncFetchUrl:
                 _make_response(503, ""),
             ]
         )
-        api = WibeeeAPI(session, "192.168.1.30")
+        api = WibeeeAPI(session, "192.168.1.150")
         result = await api.async_fetch_url("http://x/test", retries=2)
         assert result is None
 
@@ -198,7 +198,7 @@ class TestAsyncFetchStatus:
     @pytest.mark.asyncio
     async def test_success(self) -> None:
         session = _make_session([_make_response(200, STATUS_XML)])
-        api = WibeeeAPI(session, "192.168.1.30")
+        api = WibeeeAPI(session, "192.168.1.150")
         result = await api.async_fetch_status(retries=0)
         assert result is not None
         assert result["model"] == "WBT"
@@ -208,21 +208,21 @@ class TestAsyncFetchStatus:
     @pytest.mark.asyncio
     async def test_no_response(self) -> None:
         session = _make_session([_make_response(404, "")])
-        api = WibeeeAPI(session, "192.168.1.30")
+        api = WibeeeAPI(session, "192.168.1.150")
         result = await api.async_fetch_status(retries=0)
         assert result is None
 
     @pytest.mark.asyncio
     async def test_malformed_xml(self) -> None:
         session = _make_session([_make_response(200, "<not>valid<xml")])
-        api = WibeeeAPI(session, "192.168.1.30")
+        api = WibeeeAPI(session, "192.168.1.150")
         result = await api.async_fetch_status(retries=0)
         assert result is None
 
     @pytest.mark.asyncio
     async def test_no_response_tag(self) -> None:
         session = _make_session([_make_response(200, "<other><data>1</data></other>")])
-        api = WibeeeAPI(session, "192.168.1.30")
+        api = WibeeeAPI(session, "192.168.1.150")
         result = await api.async_fetch_status(retries=0)
         assert result is None
 
@@ -238,7 +238,7 @@ class TestAsyncFetchSensorsData:
     @pytest.mark.asyncio
     async def test_parses_phases(self) -> None:
         session = _make_session([_make_response(200, STATUS_XML)])
-        api = WibeeeAPI(session, "192.168.1.30")
+        api = WibeeeAPI(session, "192.168.1.150")
         result = await api.async_fetch_sensors_data(retries=0)
         assert result is not None
         assert "fase1" in result
@@ -250,7 +250,7 @@ class TestAsyncFetchSensorsData:
     @pytest.mark.asyncio
     async def test_no_data(self) -> None:
         session = _make_session([_make_response(500, "")])
-        api = WibeeeAPI(session, "192.168.1.30")
+        api = WibeeeAPI(session, "192.168.1.150")
         result = await api.async_fetch_sensors_data(retries=0)
         assert result is None
 
@@ -258,7 +258,7 @@ class TestAsyncFetchSensorsData:
     async def test_no_fase_keys(self) -> None:
         xml = "<response><model>WBT</model><webversion>1.0</webversion></response>"
         session = _make_session([_make_response(200, xml)])
-        api = WibeeeAPI(session, "192.168.1.30")
+        api = WibeeeAPI(session, "192.168.1.150")
         result = await api.async_fetch_sensors_data(retries=0)
         assert result is None
 
@@ -281,7 +281,7 @@ class TestAsyncFetchDeviceInfo:
                 _make_response(200, VALUES_MAC_XML),  # values.xml?var=WIBEEE.macAddr
             ]
         )
-        api = WibeeeAPI(session, "192.168.1.30")
+        api = WibeeeAPI(session, "192.168.1.150")
         info = await api.async_fetch_device_info(retries=0)
         assert info is not None
         assert info.model == "WBT"
@@ -299,7 +299,7 @@ class TestAsyncFetchDeviceInfo:
                 _make_response(404, ""),  # values (MAC) -> fail
             ]
         )
-        api = WibeeeAPI(session, "192.168.1.30")
+        api = WibeeeAPI(session, "192.168.1.150")
         info = await api.async_fetch_device_info(retries=0)
         assert info is None
 
@@ -317,7 +317,7 @@ class TestAsyncFetchDeviceInfo:
                 _make_response(200, VALUES_SOFT_VERSION_XML),  # values (firmware)
             ]
         )
-        api = WibeeeAPI(session, "192.168.1.30")
+        api = WibeeeAPI(session, "192.168.1.150")
         info = await api.async_fetch_device_info(retries=0)
         assert info is not None
         assert info.model == "WBB"
@@ -336,21 +336,21 @@ class TestAsyncCheckConnection:
     async def test_wibeee_title(self) -> None:
         html = "<html><title>WiBeee</title></html>"
         session = _make_session([_make_response(200, html)])
-        api = WibeeeAPI(session, "192.168.1.30")
+        api = WibeeeAPI(session, "192.168.1.150")
         assert await api.async_check_connection() is True
 
     @pytest.mark.asyncio
     async def test_wibeee_in_body(self) -> None:
         html = "<html><body>Welcome to WiBeee monitor</body></html>"
         session = _make_session([_make_response(200, html)])
-        api = WibeeeAPI(session, "192.168.1.30")
+        api = WibeeeAPI(session, "192.168.1.150")
         assert await api.async_check_connection() is True
 
     @pytest.mark.asyncio
     async def test_not_wibeee(self) -> None:
         html = "<html><title>Other Device</title></html>"
         session = _make_session([_make_response(200, html)])
-        api = WibeeeAPI(session, "192.168.1.30")
+        api = WibeeeAPI(session, "192.168.1.150")
         assert await api.async_check_connection() is False
 
     @pytest.mark.asyncio
@@ -362,7 +362,7 @@ class TestAsyncCheckConnection:
                 _make_response(500, ""),
             ]
         )
-        api = WibeeeAPI(session, "192.168.1.30")
+        api = WibeeeAPI(session, "192.168.1.150")
         assert await api.async_check_connection() is False
 
 
@@ -382,7 +382,7 @@ class TestAsyncConfigurePushServer:
                 _make_response(200, "OK"),  # config_value?reset=true
             ]
         )
-        api = WibeeeAPI(session, "192.168.1.30")
+        api = WibeeeAPI(session, "192.168.1.150")
         result = await api.async_configure_push_server("192.168.1.50", 8123)
         assert result is True
 
@@ -395,7 +395,7 @@ class TestAsyncConfigurePushServer:
                 _make_response(200, "OK"),
             ]
         )
-        api = WibeeeAPI(session, "192.168.1.30")
+        api = WibeeeAPI(session, "192.168.1.150")
         await api.async_configure_push_server("192.168.1.50", 8123)
 
         # 8123 decimal = 1fbb hex
@@ -412,7 +412,7 @@ class TestAsyncConfigurePushServer:
                 _make_response(200, "OK"),
             ]
         )
-        api = WibeeeAPI(session, "192.168.1.30")
+        api = WibeeeAPI(session, "192.168.1.150")
         await api.async_configure_push_server("10.0.0.1", 8600)
 
         call_args = session.get.call_args_list[0]
@@ -429,7 +429,7 @@ class TestAsyncConfigurePushServer:
                 _make_response(500, ""),
             ]
         )
-        api = WibeeeAPI(session, "192.168.1.30")
+        api = WibeeeAPI(session, "192.168.1.150")
         result = await api.async_configure_push_server("192.168.1.50", 8123)
         assert result is False
 
@@ -445,42 +445,42 @@ class TestDeviceActions:
     @pytest.mark.asyncio
     async def test_reboot_success(self) -> None:
         session = _make_session([_make_response(200, "OK")])
-        api = WibeeeAPI(session, "192.168.1.30")
+        api = WibeeeAPI(session, "192.168.1.150")
         assert await api.async_reboot() is True
 
     @pytest.mark.asyncio
     async def test_reboot_failure(self) -> None:
         session = _make_session([_make_response(500, "")])
-        api = WibeeeAPI(session, "192.168.1.30")
+        api = WibeeeAPI(session, "192.168.1.150")
         assert await api.async_reboot() is False
 
     @pytest.mark.asyncio
     async def test_reboot_url(self) -> None:
         session = _make_session([_make_response(200, "OK")])
-        api = WibeeeAPI(session, "192.168.1.30")
+        api = WibeeeAPI(session, "192.168.1.150")
         await api.async_reboot()
         url = session.get.call_args_list[0][0][0]
-        assert url == "http://192.168.1.30:80/config_value?reboot=1"
+        assert url == "http://192.168.1.150:80/config_value?reboot=1"
 
     @pytest.mark.asyncio
     async def test_reset_energy_success(self) -> None:
         session = _make_session([_make_response(200, "OK")])
-        api = WibeeeAPI(session, "192.168.1.30")
+        api = WibeeeAPI(session, "192.168.1.150")
         assert await api.async_reset_energy() is True
 
     @pytest.mark.asyncio
     async def test_reset_energy_failure(self) -> None:
         session = _make_session([_make_response(500, "")])
-        api = WibeeeAPI(session, "192.168.1.30")
+        api = WibeeeAPI(session, "192.168.1.150")
         assert await api.async_reset_energy() is False
 
     @pytest.mark.asyncio
     async def test_reset_energy_url(self) -> None:
         session = _make_session([_make_response(200, "OK")])
-        api = WibeeeAPI(session, "192.168.1.30")
+        api = WibeeeAPI(session, "192.168.1.150")
         await api.async_reset_energy()
         url = session.get.call_args_list[0][0][0]
-        assert url == "http://192.168.1.30:80/resetEnergy?resetEn=1"
+        assert url == "http://192.168.1.150:80/resetEnergy?resetEn=1"
 
 
 # ---------------------------------------------------------------------------
@@ -500,7 +500,7 @@ class TestAsyncGetPushServerConfig:
                 _make_response(200, VALUES_SERVER_PORT_XML),  # serverPort
             ]
         )
-        api = WibeeeAPI(session, "192.168.1.30")
+        api = WibeeeAPI(session, "192.168.1.150")
         result = await api.async_get_push_server_config()
         assert result is not None
         assert result["server_ip"] == "192.168.1.50"
@@ -516,7 +516,7 @@ class TestAsyncGetPushServerConfig:
                 _make_response(200, bad_port_xml),
             ]
         )
-        api = WibeeeAPI(session, "192.168.1.30")
+        api = WibeeeAPI(session, "192.168.1.150")
         result = await api.async_get_push_server_config()
         assert result is not None
         assert result["server_port"] == 0
@@ -535,7 +535,7 @@ class TestAsyncGetPushServerConfig:
                 _make_response(200, VALUES_SERVER_PORT_XML),  # serverPort attempt 1
             ]
         )
-        api = WibeeeAPI(session, "192.168.1.30")
+        api = WibeeeAPI(session, "192.168.1.150")
         result = await api.async_get_push_server_config()
         assert result is None
 
@@ -549,13 +549,13 @@ class TestAPIInit:
     """Tests for API initialization."""
 
     def test_base_url_default_port(self) -> None:
-        api = WibeeeAPI(MagicMock(), "192.168.1.30")
-        assert api.base_url == "http://192.168.1.30:80"
+        api = WibeeeAPI(MagicMock(), "192.168.1.150")
+        assert api.base_url == "http://192.168.1.150:80"
 
     def test_base_url_custom_port(self) -> None:
-        api = WibeeeAPI(MagicMock(), "192.168.1.30", port=8080)
-        assert api.base_url == "http://192.168.1.30:8080"
+        api = WibeeeAPI(MagicMock(), "192.168.1.150", port=8080)
+        assert api.base_url == "http://192.168.1.150:8080"
 
     def test_custom_timeout(self) -> None:
-        api = WibeeeAPI(MagicMock(), "192.168.1.30", timeout=timedelta(seconds=30))
+        api = WibeeeAPI(MagicMock(), "192.168.1.150", timeout=timedelta(seconds=30))
         assert api.timeout.total == 30.0

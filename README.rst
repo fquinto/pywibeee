@@ -21,14 +21,30 @@ Supports two update modes (user chooses during setup):
 Features
 ~~~~~~~~
 
-* Config Flow UI — add the device from the HA interface.
-* DHCP auto-discovery — devices with MAC prefix ``00:1E:C0`` are detected automatically.
-* Auto-configuration — the integration can configure the WiBeee to push data to HA (IP + HTTP port).
+* 📡 **Local Push** (recommended) — real-time updates via HTTP push (no polling overhead).
+* 🔄 **Polling mode** — periodic fetch of ``status.xml`` (configurable interval, default 30 s).
+* 🔍 **DHCP auto-discovery** — devices with MAC prefix ``00:1E:C0`` are detected automatically.
+* ⚙️ **Config Flow UI**:
+
+  * Step 1: enter or confirm device IP.
+  * Step 2: select update mode (Local Push or Polling).
+
+* 🔧 **Options Flow**:
+
+  * Switch between push and polling.
+  * Configure polling interval.
+  * Re-run push auto-configuration.
+
+* ⚡ **Auto-configuration** (optional) — the integration can configure the WiBeee to push data to HA (IP + HTTP port).
 * 24 sensor types per phase: voltage, current, active/apparent/reactive power, frequency, power factor, active energy, reactive energy, angle, THD current & voltage with harmonics.
-* Device Registry with manufacturer, model, firmware version, and link to the device web UI.
-* Options Flow — switch modes, change polling interval, or re-run auto-configuration at any time.
-* Translations: English, Spanish, Catalan.
+* 🧩 **Device Registry**:
+
+  * Main device with manufacturer, model, firmware version, and link to the device web UI.
+  * Per-phase sub-devices (L1, L2, L3) linked via ``via_device``.
+
+* 🌍 **Translations**: English, Spanish, Catalan.
 * 12 device models: WBM, WBT, WMX, WTD, WX2, WX3, WXX, WBB, WB3, W3P, WGD, WBP.
+* 🧪 Fully async, non-blocking implementation.
 
 Installation
 ~~~~~~~~~~~~
@@ -52,9 +68,75 @@ If you choose Local Push with auto-configure enabled, the integration sends the 
 Requirements
 ~~~~~~~~~~~~
 
-* Home Assistant 2025.1.0 or later.
+* Home Assistant 2024.1.0 or later.
 * WiBeee device accessible on the local network (static IP or DHCP reservation recommended).
 * For Local Push: the WiBeee must be able to reach HA's HTTP port (8123 by default).
+
+Architecture
+~~~~~~~~~~~~
+
+The integration follows modern Home Assistant patterns (2024+):
+
+* **``entry.runtime_data``** — typed runtime data (``WibeeeRuntimeData`` dataclass) instead of ``hass.data[DOMAIN]``.
+* **Single ``WibeeeCoordinator(DataUpdateCoordinator)``** — handles both polling (``update_interval=30s``) and push (``update_interval=None``) modes. Push data arrives via ``async_push_update()``.
+* **Single ``WibeeeSensor(CoordinatorEntity, SensorEntity)``** — one entity class for all sensor types.
+* **Deterministic entity creation** — phases are discovered from the device (1-phase vs 3-phase), then ALL 24 sensor types are created per phase. Sensors without data report ``available=False``.
+* **``ConfigEntryNotReady``** — raised on connection errors during setup so HA retries automatically.
+* **Narrow exceptions** — ``aiohttp.ClientError``, ``asyncio.TimeoutError``, ``ET.ParseError`` instead of bare ``except Exception``.
+* **Read-only data contract** — ``WibeeeData = Mapping[str, Mapping[str, str]]`` ensures coordinator data is not mutated downstream.
+* **XML parsing via stdlib** — uses ``xml.etree.ElementTree`` (no ``xmltodict`` dependency in the HA component).
+
+Discovery & Push
+~~~~~~~~~~~~~~~~
+
+* **DHCP discovery** — devices with MAC prefix ``00:1E:C0`` are auto-detected.
+* **Push receiver** — registers an HTTP endpoint at ``/Wibeee/receiverAvg`` on HA's built-in HTTP server. The WiBeee sends periodic GET requests with sensor values as query parameters. The receiver maps push parameter prefixes (``v``, ``a``, ``e``, ...) to XML sensor keys (``vrms``, ``p_activa``, ``energia_activa``, ...) and routes data to the coordinator.
+* **Auto-configure** — optionally sends HA's IP and port to the device so it starts pushing immediately.
+
+Design Decisions
+~~~~~~~~~~~~~~~~
+
+* **Component version (1.2.0) != library version (0.1.1)** — the HA custom component and the CLI library are versioned independently.
+* **``Mapping`` type alias** — ``WibeeeData`` uses ``Mapping`` (read-only) instead of ``dict`` to prevent accidental mutation of coordinator data by sensor entities.
+* **One coordinator, two modes** — instead of separate coordinator classes for polling and push, a single coordinator handles both. Push mode sets ``update_interval=None`` and exposes ``async_push_update()`` as the public API for incoming data.
+* **All sensors per phase** — even if a sensor type has no data yet, the entity is created and marked ``available=False``. This avoids entity churn when sensors appear/disappear.
+
+Quality & Testing
+~~~~~~~~~~~~~~~~~
+
+* **119 automated tests** covering coordinator, sensors, config flow, API, push receiver, buttons, and constants.
+* **Ruff** clean (no lint warnings).
+* Translations in English, Spanish, and Catalan.
+
+Quality Scale
+~~~~~~~~~~~~~
+
+This integration aims to meet the `Integration Quality Scale <https://developers.home-assistant.io/docs/integration_quality_scale_index/>`_:
+
+* ✅ Config flow
+* ✅ Options flow
+* ✅ Device registry support
+* ✅ Async implementation
+* ✅ Error handling
+* ✅ Logging
+* ✅ Translations
+* ✅ Tests
+* ✅ Documentation
+
+Notes for Reviewers
+~~~~~~~~~~~~~~~~~~~
+
+* Push mode uses the HA HTTP component (no custom ports opened).
+* Coordinator is used as a passive data bus for push updates (``update_interval=None``).
+* Entities are deterministic per discovered phase (hardware-defined).
+* Auto-configuration of push mode is optional and user-controlled.
+
+Tested With
+~~~~~~~~~~~
+
+* Multiple WiBeee device models (single-phase and three-phase).
+* Both push and polling modes.
+* DHCP discovery and manual setup.
 
 
 CLI Library

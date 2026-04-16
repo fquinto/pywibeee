@@ -1,17 +1,17 @@
 # ESTABLECER RED
 
-       c0a8011e = 192.168.1.30
+       c0a80196 = 192.168.1.150
        c0a80101 = 192.168.1.1
        08080808 = 8.8.8.8
        08080404 = 8.8.4.4
 
-       curl 'http://192.168.1.150/config_value?name=WIBEEE&dhcp=false&ip=c0a8011e&gw=c0a80101&subnet=ffffff00&dns1=08080808&dns2=08080404&id=0.4281428711978198' -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0' -H 'Accept: */*' -H 'Accept-Language: es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3' --compressed -H 'Connection: keep-alive' -H 'Referer: http://192.168.1.150/en/index.html'
+       curl 'http://192.168.1.150/config_value?name=WIBEEE&dhcp=false&ip=c0a80196&gw=c0a80101&subnet=ffffff00&dns1=08080808&dns2=08080404&id=0.4281428711978198' -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0' -H 'Accept: */*' -H 'Accept-Language: es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3' --compressed -H 'Connection: keep-alive' -H 'Referer: http://192.168.1.150/en/index.html'
 
-       curl 'http://192.168.1.150/config_value?gw=c0a80101&subnet=ffffff00&dns2=08080404&ip=c0a8011e&dns1=08080808&name=WIBEEE&id=0.8&dhcp=false' -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0' -H 'Accept: */*' -H 'Accept-Language: es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3' --compressed -H 'Connection: keep-alive' -H 'Referer: http://192.168.1.150/en/index.html'
+       curl 'http://192.168.1.150/config_value?gw=c0a80101&subnet=ffffff00&dns2=08080404&ip=c0a80196&dns1=08080808&name=WIBEEE&id=0.8&dhcp=false' -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0' -H 'Accept: */*' -H 'Accept-Language: es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3' --compressed -H 'Connection: keep-alive' -H 'Referer: http://192.168.1.150/en/index.html'
 
-Ip = 192.168.1.30
+Ip = 192.168.1.150
 
-       http -v http://192.168.1.150/config_value?name=WIBEEE&dhcp=false&ip=c0a8011e&gw=c0a80101&subnet=ffffff00&dns1=08080808&dns2=08080404
+       http -v http://192.168.1.150/config_value?name=WIBEEE&dhcp=false&ip=c0a80196&gw=c0a80101&subnet=ffffff00&dns1=08080808&dns2=08080404
 
 Ip = 192.168.0.1
 
@@ -63,9 +63,9 @@ ip = 192.168.0.1
        http -v http://192.168.0.1/configura_server?ipServidor=192.168.1.50&URLServidor=192.168.1.50&portServidor=2198
 
 port = 2198 hex = 8600 dec
-ip = 192.168.1.30
+ip = 192.168.1.150
 
-       http -v http://192.168.1.30/configura_server?ipServidor=192.168.1.50&URLServidor=192.168.1.50&portServidor=2198
+       http -v http://192.168.1.150/configura_server?ipServidor=192.168.1.50&URLServidor=192.168.1.50&portServidor=2198
 
 # REFRESCO
 

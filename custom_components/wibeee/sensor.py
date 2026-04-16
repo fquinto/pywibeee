@@ -6,7 +6,14 @@ Wibeee energy monitor device. All sensors are ``CoordinatorEntity``
 instances backed by a single ``WibeeeCoordinator``:
 
 - **Polling mode**: Coordinator periodically fetches status.xml.
-- **Push mode**: Coordinator receives data via ``async_set_updated_data()``.
+- **Push mode**: Coordinator receives data via ``async_push_update()``.
+
+Entity creation strategy:
+    Phases are **discovered** from the initial data fetch (hardware-dependent:
+    single-phase devices report fase1+fase4, three-phase report fase1-4).
+    For each discovered phase, **all** ``SENSOR_TYPES`` are created
+    deterministically. Sensors whose keys are not present in the data
+    report ``available=False`` and ``native_value=None``.
 
 Documentation: https://github.com/fquinto/pywibeee
 """
@@ -52,7 +59,8 @@ async def async_setup_entry(
     coordinator = runtime.coordinator
     device_info = runtime.device_info
 
-    # Wait for first data if not already available (polling first refresh)
+    # Discover phases from initial data (hardware-dependent).
+    # Single-phase: fase1 + fase4. Three-phase: fase1-3 + fase4.
     if coordinator.data is None:
         _LOGGER.warning(
             "No data available for Wibeee %s (%s); no sensors created",
@@ -61,41 +69,42 @@ async def async_setup_entry(
         )
         return
 
-    # Build entities from discovered phases/sensors.
+    discovered_phases = list(coordinator.data.keys())
+    if not discovered_phases:
+        _LOGGER.warning(
+            "No phases found for Wibeee %s (%s)",
+            device_info.mac_addr_short,
+            device_info.ip_addr,
+        )
+        return
+
+    # Build entities: discovered phases x ALL sensor types (deterministic).
     # Process fase4 (Total) first to ensure the parent device exists
     # before child phase devices that reference it via via_device.
     entities: list[WibeeeSensor] = []
     sorted_phases = sorted(
-        coordinator.data.items(),
-        key=lambda x: (0 if x[0] == "fase4" else 1, x[0]),
+        discovered_phases,
+        key=lambda p: (0 if p == "fase4" else 1, p),
     )
-    for phase_key, phase_data in sorted_phases:
-        for sensor_key in phase_data:
-            description = SENSOR_TYPES.get(sensor_key)
-            if description is not None:
-                entities.append(
-                    WibeeeSensor(
-                        coordinator=coordinator,
-                        device_info=device_info,
-                        phase_key=phase_key,
-                        description=description,
-                    )
+    for phase_key in sorted_phases:
+        for description in SENSOR_TYPES.values():
+            entities.append(
+                WibeeeSensor(
+                    coordinator=coordinator,
+                    device_info=device_info,
+                    phase_key=phase_key,
+                    description=description,
                 )
+            )
 
-    if entities:
-        async_add_entities(entities)
-        _LOGGER.info(
-            "Added %d sensors for Wibeee %s (%s)",
-            len(entities),
-            device_info.mac_addr_short,
-            device_info.ip_addr,
-        )
-    else:
-        _LOGGER.warning(
-            "No sensors found for Wibeee %s (%s)",
-            device_info.mac_addr_short,
-            device_info.ip_addr,
-        )
+    async_add_entities(entities)
+    _LOGGER.debug(
+        "Added %d sensors for Wibeee %s (%s) across %d phases",
+        len(entities),
+        device_info.mac_addr_short,
+        device_info.ip_addr,
+        len(sorted_phases),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -137,6 +146,10 @@ class WibeeeSensor(CoordinatorEntity[WibeeeCoordinator], SensorEntity):
 
     Works for both polling and push modes. The coordinator provides
     the data; the sensor reads its specific phase/key from it.
+
+    Entities are created deterministically for all known sensor types
+    per discovered phase. Sensors report ``available=False`` when their
+    specific key is not present in the coordinator data.
     """
 
     _attr_has_entity_name = True
@@ -179,12 +192,14 @@ class WibeeeSensor(CoordinatorEntity[WibeeeCoordinator], SensorEntity):
 
     @property
     def available(self) -> bool:
-        """Return True if the coordinator has data for this sensor."""
+        """Return True if the coordinator has data for this sensor.
+
+        Extends CoordinatorEntity.available (which checks coordinator
+        connectivity) with phase/key-level granularity.
+        """
         if not super().available:
             return False
-        if self.coordinator.data is None:
-            return False
-        phase_data = self.coordinator.data.get(self._phase_key)
+        phase_data = (self.coordinator.data or {}).get(self._phase_key)
         if phase_data is None:
             return False
         return self.entity_description.key in phase_data

@@ -5,18 +5,22 @@ from __future__ import annotations
 from unittest.mock import AsyncMock
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
-from homeassistant.const import UnitOfEnergy
+from homeassistant.const import STATE_UNAVAILABLE, UnitOfEnergy
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.wibeee.const import DOMAIN
+from custom_components.wibeee.const import DOMAIN, SENSOR_TYPES
 
 from .conftest import (
     MOCK_MAC,
     MOCK_PUSH_QUERY,
     MOCK_SENSOR_DATA,
 )
+
+# MOCK_SENSOR_DATA has 2 phases (fase1, fase4).
+# Deterministic creation: 2 phases x len(SENSOR_TYPES) sensor types.
+EXPECTED_ENTITY_COUNT = 2 * len(SENSOR_TYPES)
 
 
 # ---------------------------------------------------------------------------
@@ -29,23 +33,38 @@ async def test_polling_sensors_created(
     mock_config_entry_polling: MockConfigEntry,
     mock_wibeee_api,
 ) -> None:
-    """Test that polling mode creates sensor entities."""
+    """Test that polling mode creates all deterministic sensor entities."""
     mock_config_entry_polling.add_to_hass(hass)
     await hass.config_entries.async_setup(mock_config_entry_polling.entry_id)
     await hass.async_block_till_done()
 
-    # Check some key entities exist
     states = hass.states.async_all("sensor")
-    assert len(states) > 0
+    assert len(states) == EXPECTED_ENTITY_COUNT
 
-    # Check entity IDs follow the expected pattern
+    # Sensors present in data should be available
     entity_ids = [s.entity_id for s in states]
-    assert any("voltage" in eid or "phase_voltage" in eid for eid in entity_ids), (
-        f"No voltage sensor found in: {entity_ids}"
-    )
-    assert any("active_power" in eid for eid in entity_ids), (
-        f"No active power sensor found in: {entity_ids}"
-    )
+    assert any("phase_voltage" in eid for eid in entity_ids)
+    assert any("active_power" in eid for eid in entity_ids)
+
+
+async def test_polling_sensors_unavailable_when_key_missing(
+    hass: HomeAssistant,
+    mock_config_entry_polling: MockConfigEntry,
+    mock_wibeee_api,
+) -> None:
+    """Sensors for keys not in data report unavailable."""
+    mock_config_entry_polling.add_to_hass(hass)
+    await hass.config_entries.async_setup(mock_config_entry_polling.entry_id)
+    await hass.async_block_till_done()
+
+    states = hass.states.async_all("sensor")
+
+    # fase4 only has 4 keys in MOCK_SENSOR_DATA, so most sensors are unavailable.
+    # fase4 entities use the main device (no phase prefix like "l1_").
+    fase4_unavailable = [
+        s for s in states if "_l1_" not in s.entity_id and s.state == STATE_UNAVAILABLE
+    ]
+    assert len(fase4_unavailable) > 0, "Expected some unavailable sensors for fase4"
 
 
 async def test_polling_sensor_values(
@@ -58,15 +77,14 @@ async def test_polling_sensor_values(
     await hass.config_entries.async_setup(mock_config_entry_polling.entry_id)
     await hass.async_block_till_done()
 
-    # Find the active power sensor for fase1
+    # Find the active power sensor for fase1 (L1)
     states = hass.states.async_all("sensor")
     power_sensors = [
         s for s in states if "active_power" in s.entity_id and "l1" in s.entity_id
     ]
 
-    if power_sensors:
-        state = power_sensors[0]
-        assert state.state == "277.0"
+    assert len(power_sensors) > 0, "Expected L1 active power sensor"
+    assert power_sensors[0].state == "277.0"
 
 
 async def test_polling_sensor_energy_dashboard_compliance(
@@ -85,24 +103,24 @@ async def test_polling_sensor_energy_dashboard_compliance(
     await hass.config_entries.async_setup(mock_config_entry_polling.entry_id)
     await hass.async_block_till_done()
 
-    # Find energy sensors
     states = hass.states.async_all("sensor")
     energy_sensors = [
-        s for s in states if "energy" in s.entity_id or "energia" in s.entity_id
+        s
+        for s in states
+        if "active_energy" in s.entity_id and s.state != STATE_UNAVAILABLE
     ]
 
+    assert len(energy_sensors) > 0, "Expected available active energy sensors"
     for state in energy_sensors:
-        # Only check active energy sensors (reactive have different device_class)
-        if "active_energy" in state.entity_id:
-            attrs = state.attributes
-            assert attrs.get("device_class") == SensorDeviceClass.ENERGY
-            assert attrs.get("state_class") == SensorStateClass.TOTAL_INCREASING
-            assert attrs.get("unit_of_measurement") in (
-                UnitOfEnergy.WATT_HOUR,
-                UnitOfEnergy.KILO_WATT_HOUR,
-                "Wh",
-                "kWh",
-            )
+        attrs = state.attributes
+        assert attrs.get("device_class") == SensorDeviceClass.ENERGY
+        assert attrs.get("state_class") == SensorStateClass.TOTAL_INCREASING
+        assert attrs.get("unit_of_measurement") in (
+            UnitOfEnergy.WATT_HOUR,
+            UnitOfEnergy.KILO_WATT_HOUR,
+            "Wh",
+            "kWh",
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -115,13 +133,13 @@ async def test_push_sensors_created(
     mock_config_entry_push: MockConfigEntry,
     mock_wibeee_api,
 ) -> None:
-    """Test that push mode creates sensor entities."""
+    """Test that push mode creates all deterministic sensor entities."""
     mock_config_entry_push.add_to_hass(hass)
     await hass.config_entries.async_setup(mock_config_entry_push.entry_id)
     await hass.async_block_till_done()
 
     states = hass.states.async_all("sensor")
-    assert len(states) > 0
+    assert len(states) == EXPECTED_ENTITY_COUNT
 
 
 async def test_push_sensor_initial_values(
@@ -135,9 +153,9 @@ async def test_push_sensor_initial_values(
     await hass.async_block_till_done()
 
     states = hass.states.async_all("sensor")
-    # At least some should have non-unknown values (from initial poll)
-    non_unknown = [s for s in states if s.state != "unknown"]
-    assert len(non_unknown) > 0
+    # Sensors with keys present in MOCK_SENSOR_DATA should have values
+    available = [s for s in states if s.state not in ("unknown", STATE_UNAVAILABLE)]
+    assert len(available) > 0
 
 
 async def test_push_sensor_updates_via_http(
@@ -164,9 +182,8 @@ async def test_push_sensor_updates_via_http(
         s for s in states if "active_power" in s.entity_id and "l1" in s.entity_id
     ]
 
-    if power_sensors:
-        state = power_sensors[0]
-        assert state.state == "277.0"
+    assert len(power_sensors) > 0
+    assert power_sensors[0].state == "277.0"
 
 
 async def test_push_sensor_updates_with_new_values(
@@ -198,9 +215,8 @@ async def test_push_sensor_updates_with_new_values(
         s for s in states if "active_power" in s.entity_id and "l1" in s.entity_id
     ]
 
-    if power_sensors:
-        state = power_sensors[0]
-        assert state.state == "350.0"
+    assert len(power_sensors) > 0
+    assert power_sensors[0].state == "350.0"
 
 
 # ---------------------------------------------------------------------------
@@ -222,7 +238,7 @@ async def test_push_no_initial_data_logs_warning(
 
     states = hass.states.async_all("sensor")
     assert len(states) == 0
-    assert "no sensors found" in caplog.text.lower() or "no data" in caplog.text.lower()
+    assert "no data" in caplog.text.lower()
 
 
 async def test_polling_device_info_none_fallback(
@@ -238,7 +254,7 @@ async def test_polling_device_info_none_fallback(
 
     # Should still create sensors despite fallback device info
     states = hass.states.async_all("sensor")
-    assert len(states) > 0
+    assert len(states) == EXPECTED_ENTITY_COUNT
 
 
 async def test_polling_coordinator_fetch_failure(
@@ -257,7 +273,7 @@ async def test_polling_coordinator_fetch_failure(
 
     # Sensors should be created from first successful fetch
     states = hass.states.async_all("sensor")
-    assert len(states) > 0
+    assert len(states) == EXPECTED_ENTITY_COUNT
 
 
 async def test_fase4_total_created_before_phases(
@@ -277,6 +293,10 @@ async def test_fase4_total_created_before_phases(
     mock_config_entry_push.add_to_hass(hass)
     await hass.config_entries.async_setup(mock_config_entry_push.entry_id)
     await hass.async_block_till_done()
+
+    # Should create 4 phases x len(SENSOR_TYPES) = deterministic count
+    states = hass.states.async_all("sensor")
+    assert len(states) == 4 * len(SENSOR_TYPES)
 
     device_registry = dr.async_get(hass)
     wibeee_devices = [

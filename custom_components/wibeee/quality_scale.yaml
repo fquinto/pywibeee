@@ -16,9 +16,7 @@ rules:
     comment: This integration does not provide service actions.
   docs-high-level-description: done
   docs-installation-instructions: done
-  docs-removal-instructions:
-    status: todo
-    comment: Removal instructions not yet in docs.
+  docs-removal-instructions: done
   entity-event-setup: done
   entity-unique-id: done
   has-entity-name: done
@@ -32,9 +30,7 @@ rules:
     status: exempt
     comment: This integration does not provide service actions.
   config-entry-unloading: done
-  docs-configuration-parameters:
-    status: todo
-    comment: Options flow parameters not yet documented.
+  docs-configuration-parameters: done
   docs-installation-parameters: done
   entity-unavailable: done
   integration-owner: done
@@ -50,25 +46,13 @@ rules:
   diagnostics: done
   discovery-update-info: done
   discovery: done
-  docs-data-update:
-    status: todo
-    comment: Push vs polling data update mechanism not yet documented in detail.
-  docs-examples:
-    status: todo
-    comment: No automation examples in docs yet.
-  docs-known-limitations:
-    status: todo
-    comment: Known limitations not yet documented.
+  docs-data-update: done
+  docs-examples: done
+  docs-known-limitations: done
   docs-supported-devices: done
-  docs-supported-functions:
-    status: todo
-    comment: Full entity/platform list not yet in docs.
-  docs-troubleshooting:
-    status: todo
-    comment: No troubleshooting section in docs yet.
-  docs-use-cases:
-    status: todo
-    comment: No use case examples in docs yet.
+  docs-supported-functions: done
+  docs-troubleshooting: done
+  docs-use-cases: done
   dynamic-devices:
     status: exempt
     comment: Device phases are fixed hardware; no dynamic device addition.

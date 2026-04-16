@@ -117,13 +117,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: WibeeeConfigEntry) -> bo
         # Do one initial poll to discover available sensors
         initial_data = await api.async_fetch_sensors_data(retries=3)
         if initial_data:
-            coordinator.async_set_updated_data(initial_data)
+            coordinator.async_push_update(initial_data)
 
         # Register with push receiver
         from .push_receiver import async_setup_push_receiver
 
         receiver = async_setup_push_receiver(hass)
-        receiver.register_device(mac_addr, coordinator.async_set_updated_data)
+        receiver.register_device(mac_addr, coordinator.async_push_update)
 
         entry.async_on_unload(lambda: receiver.unregister_device(mac_addr))
 

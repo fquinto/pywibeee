@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import timedelta
 from unittest.mock import AsyncMock, MagicMock
 
+import aiohttp
 import pytest
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import UpdateFailed
@@ -61,6 +63,14 @@ async def test_coordinator_init_push(hass: HomeAssistant) -> None:
     assert coordinator.update_interval is None
 
 
+async def test_coordinator_default_name_uses_host(hass: HomeAssistant) -> None:
+    """When no name is provided, coordinator uses Wibeee + host."""
+    api = _make_api_mock()
+    coordinator = WibeeeCoordinator(hass, api)
+
+    assert coordinator.name == f"Wibeee {MOCK_HOST}"
+
+
 # ---------------------------------------------------------------------------
 # _async_update_data – success path
 # ---------------------------------------------------------------------------
@@ -97,11 +107,11 @@ async def test_async_update_data_none_raises_update_failed(
         await coordinator._async_update_data()
 
 
-async def test_async_update_data_api_exception_raises_update_failed(
+async def test_async_update_data_timeout_raises_update_failed(
     hass: HomeAssistant,
 ) -> None:
-    """_async_update_data wraps API exceptions in UpdateFailed."""
-    api = _make_api_mock(side_effect=TimeoutError("Device unreachable"))
+    """_async_update_data wraps asyncio.TimeoutError in UpdateFailed."""
+    api = _make_api_mock(side_effect=asyncio.TimeoutError())
     coordinator = WibeeeCoordinator(
         hass, api, name="Wibeee", update_interval=timedelta(seconds=30)
     )
@@ -110,9 +120,11 @@ async def test_async_update_data_api_exception_raises_update_failed(
         await coordinator._async_update_data()
 
 
-async def test_async_update_data_connection_error(hass: HomeAssistant) -> None:
-    """_async_update_data wraps ConnectionError in UpdateFailed."""
-    api = _make_api_mock(side_effect=ConnectionError("Connection refused"))
+async def test_async_update_data_client_error_raises_update_failed(
+    hass: HomeAssistant,
+) -> None:
+    """_async_update_data wraps aiohttp.ClientError in UpdateFailed."""
+    api = _make_api_mock(side_effect=aiohttp.ClientError("Connection refused"))
     coordinator = WibeeeCoordinator(
         hass, api, name="Wibeee", update_interval=timedelta(seconds=30)
     )
@@ -121,24 +133,37 @@ async def test_async_update_data_connection_error(hass: HomeAssistant) -> None:
         await coordinator._async_update_data()
 
 
+async def test_async_update_data_invalid_format_raises_update_failed(
+    hass: HomeAssistant,
+) -> None:
+    """_async_update_data raises UpdateFailed if data is not a dict."""
+    api = _make_api_mock(sensor_data="not a dict")  # type: ignore[arg-type]
+    coordinator = WibeeeCoordinator(
+        hass, api, name="Wibeee", update_interval=timedelta(seconds=30)
+    )
+
+    with pytest.raises(UpdateFailed, match="Invalid data format"):
+        await coordinator._async_update_data()
+
+
 # ---------------------------------------------------------------------------
-# async_set_updated_data – push mode injection
+# async_push_update – push mode public API
 # ---------------------------------------------------------------------------
 
 
-async def test_push_mode_set_updated_data(hass: HomeAssistant) -> None:
-    """async_set_updated_data injects data in push mode."""
+async def test_push_update_injects_data(hass: HomeAssistant) -> None:
+    """async_push_update injects data into coordinator."""
     api = _make_api_mock()
     coordinator = WibeeeCoordinator(hass, api, name="Wibeee push", update_interval=None)
 
     assert coordinator.data is None
 
-    coordinator.async_set_updated_data(MOCK_SENSOR_DATA)
+    coordinator.async_push_update(MOCK_SENSOR_DATA)
 
     assert coordinator.data == MOCK_SENSOR_DATA
 
 
-async def test_push_mode_updates_overwrite_previous(hass: HomeAssistant) -> None:
+async def test_push_update_overwrites_previous(hass: HomeAssistant) -> None:
     """Successive push updates replace previous data."""
     api = _make_api_mock()
     coordinator = WibeeeCoordinator(hass, api, name="Wibeee push", update_interval=None)
@@ -146,11 +171,22 @@ async def test_push_mode_updates_overwrite_previous(hass: HomeAssistant) -> None
     first_data = {"fase1": {"vrms": "230.00"}}
     second_data = {"fase1": {"vrms": "231.50"}}
 
-    coordinator.async_set_updated_data(first_data)
+    coordinator.async_push_update(first_data)
     assert coordinator.data == first_data
 
-    coordinator.async_set_updated_data(second_data)
+    coordinator.async_push_update(second_data)
     assert coordinator.data == second_data
+
+
+async def test_push_update_ignores_invalid_data(hass: HomeAssistant, caplog) -> None:
+    """async_push_update ignores non-dict data and logs warning."""
+    api = _make_api_mock()
+    coordinator = WibeeeCoordinator(hass, api, name="Wibeee push", update_interval=None)
+
+    coordinator.async_push_update("bad data")  # type: ignore[arg-type]
+
+    assert coordinator.data is None
+    assert "invalid push data" in caplog.text.lower()
 
 
 # ---------------------------------------------------------------------------

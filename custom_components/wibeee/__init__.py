@@ -1,5 +1,4 @@
-"""
-Wibeee Energy Monitor integration for Home Assistant.
+"""Wibeee Energy Monitor integration for Home Assistant.
 
 This integration communicates with Wibeee (formerly Mirubee) energy monitoring
 devices manufactured by Smilics/Circutor over the local network.
@@ -10,7 +9,7 @@ Supports two update modes:
   Can auto-configure the device to point to the HA instance.
 - **Polling**: Periodically fetches status.xml from the device.
 
-No HACS required - works as a native custom_component.
+No HACS required - included as a built-in Home Assistant integration.
 
 Documentation: https://github.com/fquinto/pywibeee
 Device info: http://wibeee.circutor.com/
@@ -18,9 +17,11 @@ Device info: http://wibeee.circutor.com/
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass
 from datetime import timedelta
+import logging
+
+from .api import WibeeeAPI, WibeeeDeviceInfo
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, Platform
@@ -28,7 +29,6 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .api import WibeeeAPI, WibeeeDeviceInfo
 from .const import (
     CONF_MAC_ADDRESS,
     CONF_SCAN_INTERVAL,
@@ -40,6 +40,7 @@ from .const import (
     MODE_POLLING,
 )
 from .coordinator import WibeeeCoordinator
+from .push_receiver import async_setup_push_receiver
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -122,10 +123,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: WibeeeConfigEntry) -> bo
             )
 
         coordinator.async_push_update(initial_data)
-
         # Register with push receiver
-        from .push_receiver import async_setup_push_receiver
-
         receiver = async_setup_push_receiver(hass)
         receiver.register_device(mac_addr, coordinator.async_push_update)
 
@@ -148,6 +146,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: WibeeeConfigEntry) -> b
 
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
+    if unload_ok:
+        del entry.runtime_data
     return unload_ok
 
 

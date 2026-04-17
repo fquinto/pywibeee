@@ -1,5 +1,4 @@
-"""
-Wibeee sensor platform for Home Assistant.
+"""Wibeee sensor platform for Home Assistant.
 
 Creates sensor entities for each phase and sensor type detected on the
 Wibeee energy monitor device. All sensors are ``CoordinatorEntity``
@@ -20,26 +19,22 @@ Documentation: https://github.com/fquinto/pywibeee
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import logging
+
+from .api import WibeeeDeviceInfo
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import WibeeeConfigEntry
-from .api import WibeeeDeviceInfo
-from .const import (
-    DOMAIN,
-    KNOWN_MODELS,
-    SENSOR_TYPES,
-    WibeeeSensorEntityDescription,
-)
+from .const import DOMAIN, KNOWN_MODELS, SENSOR_TYPES, WibeeeSensorEntityDescription
 from .coordinator import WibeeeCoordinator
 
 _LOGGER = logging.getLogger(__name__)
+
 
 PARALLEL_UPDATES = 0
 
@@ -84,21 +79,20 @@ async def async_setup_entry(
     # Build entities: discovered phases x ALL sensor types (deterministic).
     # Process fase4 (Total) first to ensure the parent device exists
     # before child phase devices that reference it via via_device.
-    entities: list[WibeeeSensor] = []
     sorted_phases = sorted(
         discovered_phases,
         key=lambda p: (0 if p == "fase4" else 1, p),
     )
-    for phase_key in sorted_phases:
-        for description in SENSOR_TYPES.values():
-            entities.append(
-                WibeeeSensor(
-                    coordinator=coordinator,
-                    device_info=device_info,
-                    phase_key=phase_key,
-                    description=description,
-                )
-            )
+    entities: list[WibeeeSensor] = [
+        WibeeeSensor(
+            coordinator=coordinator,
+            device_info=device_info,
+            phase_key=phase_key,
+            description=description,
+        )
+        for phase_key in sorted_phases
+        for description in SENSOR_TYPES.values()
+    ]
 
     async_add_entities(entities)
     _LOGGER.debug(
@@ -190,7 +184,7 @@ class WibeeeSensor(CoordinatorEntity[WibeeeCoordinator], SensorEntity):
             return None
         try:
             return float(value)
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             return None
 
     @property

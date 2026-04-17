@@ -456,9 +456,11 @@ class WibeeeOptionsFlowHandler(config_entries.OptionsFlow):
         schema_dict[
             vol.Optional(
                 CONF_SCAN_INTERVAL,
-                default=options.get(
-                    CONF_SCAN_INTERVAL,
-                    int(DEFAULT_SCAN_INTERVAL.total_seconds()),
+                default=int(
+                    options.get(
+                        CONF_SCAN_INTERVAL,
+                        int(DEFAULT_SCAN_INTERVAL.total_seconds()),
+                    )
                 ),
             )
         ] = NumberSelector(

@@ -29,6 +29,7 @@ keywords = ["homeautomation", "cli", "interface", "wibeee", "mirubee",
               "energy meter", "smart meter", "hass", "home-assistant",
               "circutor", "smilics"]
 dependencies = [
+    "aiohttp>=3.9.0",
     "xmltodict >= 0.13.0",
     "httpx >= 0.23.1",
 ]
@@ -44,12 +45,13 @@ Issues = "https://github.com/fquinto/pywibeee/issues"
 version = {attr = "pywibeee.__version__"}
 
 [tool.setuptools.packages.find]
+where = ["src"]
 include = ["pywibeee*"]
 exclude = ["custom_components*", "tests*", "docs*", "firmware*",
-           "webserver*", "emulator*"]
+           "webserver*", "emulator*", "CLI*"]
 
 [project.scripts]
-pywibeee = "pywibeee.main:main"
+pywibeee = "pywibeee.cli:main"
 
 [project.optional-dependencies]
 test = [

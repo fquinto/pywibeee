@@ -50,6 +50,9 @@ include = ["pywibeee*"]
 exclude = ["custom_components*", "tests*", "docs*", "firmware*",
            "webserver*", "emulator*", "CLI*"]
 
+[tool.setuptools.package-data]
+pywibeee = ["py.typed"]
+
 [project.scripts]
 pywibeee = "pywibeee.cli:main"
 

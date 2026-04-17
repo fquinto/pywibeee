@@ -14,7 +14,7 @@ import logging
 from xml.etree.ElementTree import ParseError as XMLParseError
 
 import aiohttp
-from .api import WibeeeAPI
+from pywibeee import WibeeeAPI
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed

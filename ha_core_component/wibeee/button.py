@@ -14,7 +14,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import logging
 
-from .api import WibeeeAPI, WibeeeDeviceInfo
+from pywibeee import WibeeeAPI, WibeeeDeviceInfo
 
 from homeassistant.components.button import (
     ButtonDeviceClass,

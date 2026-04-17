@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import logging
 
-from .api import WibeeeDeviceInfo
+from pywibeee import WibeeeDeviceInfo
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.core import HomeAssistant

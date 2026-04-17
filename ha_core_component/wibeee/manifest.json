@@ -3,15 +3,15 @@
   "name": "Wibeee Energy Monitor",
   "codeowners": ["@fquinto"],
   "config_flow": true,
-  "dependencies": [],
+  "dependencies": ["http", "network"],
   "dhcp": [
     {
       "macaddress": "001EC0*"
     }
   ],
-  "documentation": "https://github.com/fquinto/pywibeee",
+  "documentation": "https://www.home-assistant.io/integrations/wibeee",
   "integration_type": "device",
   "iot_class": "local_push",
   "quality_scale": "platinum",
-  "version": "1.0.0"
+  "requirements": ["pywibeee==0.1.2"]
 }

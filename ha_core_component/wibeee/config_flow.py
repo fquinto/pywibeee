@@ -10,7 +10,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 import aiohttp
-from .api import WibeeeAPI
+from pywibeee import WibeeeAPI
 import voluptuous as vol
 
 from homeassistant import config_entries, exceptions

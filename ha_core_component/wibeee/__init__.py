@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 import logging
 
-from .api import WibeeeAPI, WibeeeDeviceInfo
+from pywibeee import WibeeeAPI, WibeeeDeviceInfo
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, Platform

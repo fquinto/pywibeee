@@ -20,12 +20,13 @@ Documentation: https://github.com/fquinto/pywibeee
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 import logging
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import WibeeeConfigEntry
@@ -40,7 +41,6 @@ from .coordinator import WibeeeCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-# Coordinator-based: no per-entity parallel updates needed.
 PARALLEL_UPDATES = 0
 
 # Map phase names to human-readable labels
@@ -55,7 +55,7 @@ PHASE_NAMES: dict[str, str] = {
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: WibeeeConfigEntry,
-    async_add_entities: AddEntitiesCallback,
+    async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Wibeee sensor entities from a config entry."""
     runtime = entry.runtime_data

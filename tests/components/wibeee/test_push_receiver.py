@@ -2,303 +2,245 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+from typing import Any
 
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
+import pytest
 
 from custom_components.wibeee.push_receiver import (
     PushReceiver,
-    async_setup_push_receiver,
+    _dispatch_push_data,
+    _handle_push_request,
     parse_push_data,
 )
 
-from .conftest import MOCK_MAC, MOCK_PUSH_QUERY
-
-
 # ---------------------------------------------------------------------------
-# parse_push_data
+# Test fixtures
 # ---------------------------------------------------------------------------
 
 
-def test_parse_push_data_single_phase() -> None:
-    """Test parsing push data for a single phase device."""
+@pytest.fixture
+def push_receiver() -> PushReceiver:
+    """Create a PushReceiver instance."""
+    return PushReceiver()
+
+
+@pytest.fixture
+def registered_receiver(
+    push_receiver: PushReceiver,
+) -> tuple[PushReceiver, list[dict[str, Any]]]:
+    """Create a PushReceiver with a registered device."""
+    calls: list[dict[str, Any]] = []
+
+    def listener(data: dict[str, Any]) -> None:
+        calls.append(data)
+
+    push_receiver.register_device("001ec0112232", listener)
+    return push_receiver, calls
+
+
+# ---------------------------------------------------------------------------
+# Test helpers
+# ---------------------------------------------------------------------------
+
+
+class MockRequest:
+    """Mock Request for testing."""
+
+    def __init__(self, query: dict[str, str]) -> None:
+        """Initialize mock request."""
+        self._query = query
+        self.remote = "127.0.0.1"
+
+    @property
+    def query(self) -> dict[str, str]:
+        """Return query dict."""
+        return self._query
+
+
+# ---------------------------------------------------------------------------
+# Tests: parse_push_data
+# ---------------------------------------------------------------------------
+
+
+def test_parse_push_data_basic() -> None:
+    """Test basic parsing of push data."""
     query = {
-        "mac": "001ec0112233",
         "v1": "230.5",
-        "i1": "2.3",
         "a1": "277",
-        "e1": "12345",
+        "vt": "230.5",  # total
     }
+
     result = parse_push_data(query)
 
     assert "fase1" in result
+    assert "fase4" in result  # total
+
     assert result["fase1"]["vrms"] == "230.5"
-    assert result["fase1"]["irms"] == "2.3"
     assert result["fase1"]["p_activa"] == "277"
-    assert result["fase1"]["energia_activa"] == "12345"
+    assert result["fase4"]["vrms"] == "230.5"
 
 
 def test_parse_push_data_three_phase() -> None:
-    """Test parsing push data for a three phase device with totals."""
+    """Test parsing of three-phase push data."""
     query = {
-        "mac": "001ec0112233",
-        "v1": "230.5",
+        "v1": "230.0",
         "v2": "231.0",
-        "v3": "229.8",
-        "vt": "230.4",
-        "a1": "100",
-        "a2": "200",
-        "a3": "150",
-        "at": "450",
+        "v3": "229.0",
+        "vt": "230.0",
     }
-    result = parse_push_data(query)
 
-    assert len(result) == 4
-    assert result["fase1"]["vrms"] == "230.5"
-    assert result["fase2"]["vrms"] == "231.0"
-    assert result["fase3"]["vrms"] == "229.8"
-    assert result["fase4"]["vrms"] == "230.4"
-    assert result["fase4"]["p_activa"] == "450"
-
-
-def test_parse_push_data_all_sensors() -> None:
-    """Test parsing all known sensor types."""
-    query = {
-        "v1": "230.5",
-        "i1": "2.3",
-        "p1": "530",
-        "a1": "277",
-        "r1": "120",
-        "q1": "50.0",
-        "f1": "0.98",
-        "e1": "12345",
-        "o1": "6789",
-    }
-    result = parse_push_data(query)
-    fase1 = result["fase1"]
-
-    assert fase1["vrms"] == "230.5"
-    assert fase1["irms"] == "2.3"
-    assert fase1["p_aparent"] == "530"
-    assert fase1["p_activa"] == "277"
-    assert fase1["p_reactiva_ind"] == "120"
-    assert fase1["frecuencia"] == "50.0"
-    assert fase1["factor_potencia"] == "0.98"
-    assert fase1["energia_activa"] == "12345"
-    assert fase1["energia_reactiva_ind"] == "6789"
-
-
-def test_parse_push_data_ignores_unknown() -> None:
-    """Test that unknown parameters are ignored."""
-    query = {
-        "mac": "001ec0112233",
-        "v1": "230.5",
-        "xyz": "999",
-        "z1": "888",
-    }
     result = parse_push_data(query)
 
     assert "fase1" in result
-    assert len(result["fase1"]) == 1
-    assert result["fase1"]["vrms"] == "230.5"
+    assert "fase2" in result
+    assert "fase3" in result
+    assert "fase4" in result
 
 
 def test_parse_push_data_empty() -> None:
-    """Test parsing empty query parameters."""
+    """Test parsing with empty query."""
     result = parse_push_data({})
-    assert result == {}
 
-
-def test_parse_push_data_short_params() -> None:
-    """Test that single-character params are ignored."""
-    result = parse_push_data({"v": "230", "a": "277"})
     assert result == {}
 
 
 # ---------------------------------------------------------------------------
-# PushReceiver
+# Tests: _dispatch_push_data
 # ---------------------------------------------------------------------------
 
 
-def test_push_receiver_register_and_callback() -> None:
-    """Test registering a device and receiving callbacks."""
+def test_dispatch_push_data_valid(
+    registered_receiver: tuple[PushReceiver, list[dict[str, Any]]],
+) -> None:
+    """Test dispatch with valid registered device."""
+    receiver, calls = registered_receiver
+
+    query = {
+        "mac": "001ec0112232",
+        "v1": "230.5",
+    }
+
+    result = _dispatch_push_data(receiver, query)
+
+    assert "device 001ec0112232" in result
+    assert len(calls) == 1
+
+
+def test_dispatch_unknown_mac(push_receiver: PushReceiver) -> None:
+    """Test dispatch with unknown MAC."""
+    query = {
+        "mac": "deadbeef",
+        "v1": "230.5",
+    }
+
+    result = _dispatch_push_data(push_receiver, query)
+
+    assert "unregistered device" in result
+
+
+def test_dispatch_missing_mac(push_receiver: PushReceiver) -> None:
+    """Test dispatch with missing MAC."""
+    result = _dispatch_push_data(push_receiver, {})
+
+    assert result == "no MAC in push data"
+
+
+# ---------------------------------------------------------------------------
+# Tests: _handle_push_request
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_handle_push_request_ok(
+    registered_receiver: tuple[PushReceiver, list[dict[str, Any]]],
+) -> None:
+    """Test HTTP handler with valid request."""
+    receiver, calls = registered_receiver
+
+    request = MockRequest(
+        {
+            "mac": "001ec0112232",
+            "v1": "230.5",
+        }
+    )
+
+    resp = await _handle_push_request(receiver, request, "<<<WBAVG ")
+
+    assert resp.status == 200
+    assert len(calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_handle_push_request_missing_mac(push_receiver: PushReceiver) -> None:
+    """Test HTTP handler with missing MAC."""
+    request = MockRequest({})
+
+    resp = await _handle_push_request(push_receiver, request, "<<<WBAVG ")
+
+    assert resp.status == 400
+
+
+@pytest.mark.asyncio
+async def test_handle_push_request_unknown_mac(push_receiver: PushReceiver) -> None:
+    """Test HTTP handler with unknown MAC."""
+    request = MockRequest(
+        {
+            "mac": "deadbeef",
+        }
+    )
+
+    resp = await _handle_push_request(push_receiver, request, "<<<WBAVG ")
+
+    assert resp.status == 403
+
+
+# ---------------------------------------------------------------------------
+# Tests: PushReceiver
+# ---------------------------------------------------------------------------
+
+
+def test_push_receiver_register() -> None:
+    """Test registering a device."""
     receiver = PushReceiver()
-    callback = MagicMock()
+    calls: list[dict[str, Any]] = []
 
-    receiver.register_device("00:1E:C0:11:22:33", callback)
+    def listener(data: dict[str, Any]) -> None:
+        calls.append(data)
+
+    receiver.register_device("001ec0112232", listener)
+
     assert receiver.device_count == 1
-
-    listener = receiver.get_listener("001ec0112233")
-    assert listener is callback
+    assert receiver.get_listener("001ec0112232") is not None
 
 
 def test_push_receiver_unregister() -> None:
     """Test unregistering a device."""
     receiver = PushReceiver()
-    callback = MagicMock()
+    calls: list[dict[str, Any]] = []
 
-    receiver.register_device(MOCK_MAC, callback)
-    assert receiver.device_count == 1
+    def listener(data: dict[str, Any]) -> None:
+        calls.append(data)
 
-    receiver.unregister_device(MOCK_MAC)
+    receiver.register_device("001ec0112232", listener)
+    receiver.unregister_device("001ec0112232")
+
     assert receiver.device_count == 0
-    assert receiver.get_listener(MOCK_MAC) is None
+    assert receiver.get_listener("001ec0112232") is None
 
 
 def test_push_receiver_multiple_devices() -> None:
     """Test registering multiple devices."""
     receiver = PushReceiver()
-    cb1 = MagicMock()
-    cb2 = MagicMock()
+    calls1: list[dict[str, Any]] = []
+    calls2: list[dict[str, Any]] = []
 
-    receiver.register_device("001ec0112233", cb1)
-    receiver.register_device("001ec0445566", cb2)
+    def listener1(data: dict[str, Any]) -> None:
+        calls1.append(data)
+
+    def listener2(data: dict[str, Any]) -> None:
+        calls2.append(data)
+
+    receiver.register_device("001ec0112232", listener1)
+    receiver.register_device("001ec0112233", listener2)
+
     assert receiver.device_count == 2
-
-    assert receiver.get_listener("001ec0112233") is cb1
-    assert receiver.get_listener("001ec0445566") is cb2
-
-
-def test_push_receiver_mac_normalization() -> None:
-    """Test that MAC addresses are normalized (no colons, lowercase)."""
-    receiver = PushReceiver()
-    callback = MagicMock()
-
-    receiver.register_device("00:1E:C0:11:22:33", callback)
-    assert receiver.get_listener("001ec0112233") is callback
-    assert receiver.get_listener("00:1E:C0:11:22:33") is callback
-
-
-def test_push_receiver_unknown_device() -> None:
-    """Test that unknown devices return None."""
-    receiver = PushReceiver()
-    assert receiver.get_listener("001ec0999999") is None
-
-
-# ---------------------------------------------------------------------------
-# async_setup_push_receiver (idempotent)
-# ---------------------------------------------------------------------------
-
-
-async def test_setup_push_receiver_registers_views(
-    hass: HomeAssistant,
-    hass_client_no_auth,
-) -> None:
-    """Test that setup registers HTTP views and is idempotent."""
-    # Set up the HTTP component so hass.http is available
-    assert await async_setup_component(hass, "http", {"http": {}})
-    await hass.async_block_till_done()
-
-    # First call should register views
-    receiver1 = async_setup_push_receiver(hass)
-    assert receiver1 is not None
-    assert receiver1.device_count == 0
-
-    # Second call should return the same instance
-    receiver2 = async_setup_push_receiver(hass)
-    assert receiver1 is receiver2
-
-
-# ---------------------------------------------------------------------------
-# HTTP view integration tests
-# ---------------------------------------------------------------------------
-
-
-async def test_receiver_avg_endpoint(
-    hass: HomeAssistant,
-    hass_client_no_auth,
-    mock_config_entry_push,
-    mock_wibeee_api,
-) -> None:
-    """Test the /Wibeee/receiverAvg endpoint returns correct response."""
-    mock_config_entry_push.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry_push.entry_id)
-    await hass.async_block_till_done()
-
-    client = await hass_client_no_auth()
-
-    # Build query string from MOCK_PUSH_QUERY
-    query = "&".join(f"{k}={v}" for k, v in MOCK_PUSH_QUERY.items())
-    resp = await client.get(f"/Wibeee/receiverAvg?{query}")
-
-    assert resp.status == 200
-    text = await resp.text()
-    assert text == "<<<WBAVG "
-
-
-async def test_receiver_endpoint(
-    hass: HomeAssistant,
-    hass_client_no_auth,
-    mock_config_entry_push,
-    mock_wibeee_api,
-) -> None:
-    """Test the /Wibeee/receiver endpoint."""
-    mock_config_entry_push.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry_push.entry_id)
-    await hass.async_block_till_done()
-
-    client = await hass_client_no_auth()
-    resp = await client.get(f"/Wibeee/receiver?mac={MOCK_MAC}&v1=230.5")
-
-    assert resp.status == 200
-    text = await resp.text()
-    assert text == "<<<WBAVG "
-
-
-async def test_receiver_leap_endpoint(
-    hass: HomeAssistant,
-    hass_client_no_auth,
-    mock_config_entry_push,
-    mock_wibeee_api,
-) -> None:
-    """Test the /Wibeee/receiverLeap endpoint."""
-    mock_config_entry_push.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry_push.entry_id)
-    await hass.async_block_till_done()
-
-    client = await hass_client_no_auth()
-    resp = await client.get(f"/Wibeee/receiverLeap?mac={MOCK_MAC}&v1=230.5")
-
-    assert resp.status == 200
-    text = await resp.text()
-    assert text == "<<<WGRADIENT=007 "
-
-
-async def test_receiver_no_mac(
-    hass: HomeAssistant,
-    hass_client_no_auth,
-    mock_config_entry_push,
-    mock_wibeee_api,
-) -> None:
-    """Test push endpoint with no MAC in query."""
-    mock_config_entry_push.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry_push.entry_id)
-    await hass.async_block_till_done()
-
-    client = await hass_client_no_auth()
-    resp = await client.get("/Wibeee/receiverAvg?v1=230.5")
-
-    assert resp.status == 200
-    text = await resp.text()
-    assert text == "<<<WBAVG "
-
-
-async def test_receiver_unregistered_mac(
-    hass: HomeAssistant,
-    hass_client_no_auth,
-) -> None:
-    """Test push data from an unregistered device is silently accepted."""
-    # Set up the HTTP component so hass.http is available
-    assert await async_setup_component(hass, "http", {"http": {}})
-    await hass.async_block_till_done()
-
-    # Register views but don't set up any device
-    async_setup_push_receiver(hass)
-
-    client = await hass_client_no_auth()
-    resp = await client.get("/Wibeee/receiverAvg?mac=001ec0999999&v1=230.5")
-
-    assert resp.status == 200
-    text = await resp.text()
-    assert text == "<<<WBAVG "

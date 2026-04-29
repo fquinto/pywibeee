@@ -68,7 +68,8 @@ async def async_setup_entry(
         )
         return
 
-    discovered_phases = list(data.keys())
+    # Filter to known phases only
+    discovered_phases = [p for p in data if p in PHASE_NAMES]
     if not discovered_phases:
         _LOGGER.warning(
             "No phases found for Wibeee %s (%s)",
@@ -77,23 +78,29 @@ async def async_setup_entry(
         )
         return
 
-    # Build entities: discovered phases x ALL sensor types (deterministic).
+    # Build entities only for sensor keys present in each discovered phase.
     # Process fase4 (Total) first to ensure the parent device exists
     # before child phase devices that reference it via via_device.
     sorted_phases = sorted(
         discovered_phases,
         key=lambda p: (0 if p == "fase4" else 1, p),
     )
-    entities: list[WibeeeSensor] = [
-        WibeeeSensor(
-            coordinator=coordinator,
-            device_info=device_info,
-            phase_key=phase_key,
-            description=description,
-        )
-        for phase_key in sorted_phases
-        for description in SENSOR_TYPES.values()
-    ]
+    entities: list[WibeeeSensor] = []
+    for phase_key in sorted_phases:
+        phase_data = data.get(phase_key)
+        if not isinstance(phase_data, dict):
+            continue
+        for description in SENSOR_TYPES.values():
+            if description.key not in phase_data:
+                continue
+            entities.append(
+                WibeeeSensor(
+                    coordinator=coordinator,
+                    device_info=device_info,
+                    phase_key=phase_key,
+                    description=description,
+                )
+            )
 
     async_add_entities(entities)
     _LOGGER.debug(
@@ -186,7 +193,7 @@ class WibeeeSensor(CoordinatorEntity[WibeeeCoordinator], SensorEntity):
             return None
         try:
             return float(value)
-        except ValueError, TypeError:
+        except (ValueError, TypeError):
             return None
 
     @property
@@ -194,11 +201,18 @@ class WibeeeSensor(CoordinatorEntity[WibeeeCoordinator], SensorEntity):
         """Return True if the coordinator has data for this sensor.
 
         Extends CoordinatorEntity.available (which checks coordinator
-        connectivity) with phase/key-level granularity.
+        connectivity) with phase/key-level granularity and value validation.
         """
         if not super().available:
             return False
         phase_data = (self.coordinator.data or {}).get(self._phase_key)
         if phase_data is None:
             return False
-        return self.entity_description.key in phase_data
+        value = phase_data.get(self.entity_description.key)
+        if value is None:
+            return False
+        try:
+            float(value)
+        except (ValueError, TypeError):
+            return False
+        return True

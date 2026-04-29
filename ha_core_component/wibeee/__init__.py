@@ -1,24 +1,8 @@
-"""Wibeee Energy Monitor integration for Home Assistant.
-
-This integration communicates with Wibeee (formerly Mirubee) energy monitoring
-devices manufactured by Smilics/Circutor over the local network.
-
-Supports two update modes:
-- **Local Push** (default): The WiBeee pushes data to HA's built-in HTTP
-  server (port 8123 by default) at ``/Wibeee/receiverAvg``.
-  Can auto-configure the device to point to the HA instance.
-- **Polling**: Periodically fetches status.xml from the device.
-
-No HACS required - included as a built-in Home Assistant integration.
-
-Documentation: https://github.com/fquinto/pywibeee
-Device info: http://wibeee.circutor.com/
-"""
+"""The Wibeee integration."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import timedelta
 import logging
 
 import aiohttp
@@ -32,11 +16,9 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     CONF_MAC_ADDRESS,
-    CONF_SCAN_INTERVAL,
     CONF_UPDATE_MODE,
     CONF_WIBEEE_ID,
     DEFAULT_SCAN_INTERVAL,
-    DOMAIN,  # noqa: F401 — re-exported for other modules
     MODE_LOCAL_PUSH,
     MODE_POLLING,
 )
@@ -45,7 +27,7 @@ from .push_receiver import async_setup_push_receiver
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS = [Platform.BUTTON, Platform.SENSOR]
+PLATFORMS = [Platform.SENSOR]
 
 
 @dataclass
@@ -95,17 +77,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: WibeeeConfigEntry) -> bo
 
     # Create coordinator based on mode
     if mode == MODE_POLLING:
-        scan_interval = timedelta(
-            seconds=entry.options.get(
-                CONF_SCAN_INTERVAL,
-                int(DEFAULT_SCAN_INTERVAL.total_seconds()),
-            )
-        )
         coordinator = WibeeeCoordinator(
             hass,
             api,
+            config_entry=entry,
             name=f"Wibeee {device_info.mac_addr_short}",
-            update_interval=scan_interval,
+            update_interval=DEFAULT_SCAN_INTERVAL,
         )
         await coordinator.async_config_entry_first_refresh()
     else:
@@ -113,6 +90,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: WibeeeConfigEntry) -> bo
         coordinator = WibeeeCoordinator(
             hass,
             api,
+            config_entry=entry,
             name=f"Wibeee {device_info.mac_addr_short}",
             update_interval=None,
         )
@@ -127,10 +105,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: WibeeeConfigEntry) -> bo
                 f"Could not fetch initial sensor data from Wibeee at {host}"
             )
 
-        coordinator.async_push_update(initial_data)
+        if not isinstance(initial_data, dict):
+            raise ConfigEntryNotReady(
+                f"Invalid initial sensor data received from Wibeee at {host}"
+            )
+
+        coordinator.async_set_updated_data(initial_data)
+
         # Register with push receiver
+        # Ensure we use a concrete IP even if host is a hostname
+        import socket  # noqa: PLC0415
+
+        try:
+            resolved_ip = await hass.async_add_executor_job(socket.gethostbyname, host)
+        except OSError:
+            resolved_ip = host
+
         receiver = async_setup_push_receiver(hass)
-        receiver.register_device(mac_addr, coordinator.async_push_update)
+        receiver.register_device(mac_addr, resolved_ip, coordinator.async_push_update)
 
         entry.async_on_unload(lambda: receiver.unregister_device(mac_addr))
 

@@ -16,8 +16,9 @@ class UnitTests(unittest.TestCase):
 
     def test_project(self):
         """Provide auto version test."""
-        args = pywibeee.main.parsing_args(['--host', '192.168.1.150',
-                                           '--get', 'status'])
+        args = pywibeee.main.parsing_args(
+            ["--host", "192.168.1.150", "--get", "status"]
+        )
         for i in range(0, 4):
             r = pywibeee.main.program(args, False)
             print(str(r))
@@ -25,19 +26,30 @@ class UnitTests(unittest.TestCase):
 
     def test_auto_version(self):
         """Provide auto version test."""
-        args = pywibeee.main.parsing_args(['--auto', '--get', 'version'])
+        args = pywibeee.main.parsing_args(["--auto", "--get", "version"])
         r = pywibeee.main.program(args, False)
-        self.assertTrue('webversion' in str(r))
+        self.assertTrue("webversion" in str(r))
 
     def test_auto_models(self):
         """Provide auto model test."""
-        models = ['WBM', 'WBT', 'WMX', 'WTD', 'WX2', 'WX3', 'WXX',
-                  'WBB', 'WB3', 'W3P', 'WGD', 'WBP']
-        args = pywibeee.main.parsing_args(['--auto', '--get', 'model',
-                                           '-o', 'plain'])
+        models = [
+            "WBM",
+            "WBT",
+            "WMX",
+            "WTD",
+            "WX2",
+            "WX3",
+            "WXX",
+            "WBB",
+            "WB3",
+            "W3P",
+            "WGD",
+            "WBP",
+        ]
+        args = pywibeee.main.parsing_args(["--auto", "--get", "model", "-o", "plain"])
         r = pywibeee.main.program(args, False)
         self.assertTrue(str(r) in models)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

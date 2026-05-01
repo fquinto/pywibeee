@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.diagnostics import async_redact_data
+from homeassistant.components.diagnostics import REDACTED, async_redact_data
 from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant
 
@@ -44,10 +44,10 @@ async def async_get_config_entry_diagnostics(
         },
         "device": {
             "wibeee_id": device_info.wibeee_id,
-            "mac_addr": "**REDACTED**",
+            "mac_addr": REDACTED,
             "model": device_info.model,
             "firmware_version": device_info.firmware_version,
-            "ip_addr": "**REDACTED**",
+            "ip_addr": REDACTED,
         },
         "device_config": async_redact_data(device_diagnostics, TO_REDACT),
         "coordinator": {
@@ -64,8 +64,8 @@ async def async_get_config_entry_diagnostics(
 
 
 def _redact_coordinator_data(
-    data: Any,
-) -> dict[str, dict[str, str]] | None:
+    data: dict[str, dict[str, Any]] | None,
+) -> dict[str, dict[str, Any]] | None:
     """Return coordinator data (sensor values are not sensitive)."""
     if data is None:
         return None

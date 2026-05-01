@@ -34,13 +34,14 @@ from .const import (
     CONF_MAC_ADDRESS,
     CONF_UPDATE_MODE,
     CONF_WIBEEE_ID,
-    DEFAULT_HA_PORT,
     DOMAIN,
     MODE_LOCAL_PUSH,
     MODE_POLLING,
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+DEFAULT_HA_PORT = 8123
 
 
 async def validate_input(
@@ -62,12 +63,15 @@ async def validate_input(
     if device is None:
         raise NoDeviceInfo("No device info received")
 
+    # Normalize MAC for unique_id consistency
+    mac_clean = device.mac_addr_formatted.replace(":", "").lower()
+
     return (
         f"Wibeee {device.mac_addr_short}",
-        device.mac_addr_formatted,
+        mac_clean,
         {
             CONF_HOST: data[CONF_HOST],
-            CONF_MAC_ADDRESS: device.mac_addr_formatted,
+            CONF_MAC_ADDRESS: mac_clean,
             CONF_WIBEEE_ID: device.wibeee_id,
         },
     )
@@ -103,7 +107,7 @@ async def _async_configure_device(hass: HomeAssistant, host: str) -> bool:
                 "Auto-configured WiBeee at %s to push to %s:%d", host, local_ip, ha_port
             )
             return True
-    except (TimeoutError, aiohttp.ClientError, OSError):
+    except TimeoutError, aiohttp.ClientError, OSError:
         pass
     return False
 
@@ -130,7 +134,7 @@ async def _get_local_ip(hass: HomeAssistant) -> str:
         ip = await async_get_source_ip(hass)
         if ip is not None:
             return ip
-    except (ImportError, HomeAssistantError, OSError):
+    except ImportError, HomeAssistantError, OSError:
         pass
 
     try:
@@ -145,7 +149,7 @@ async def _get_local_ip(hass: HomeAssistant) -> str:
                     return host
             except ValueError:
                 pass
-    except (ImportError, HomeAssistantError, OSError):
+    except ImportError, HomeAssistantError, OSError:
         pass
 
     return await hass.async_add_executor_job(_get_local_ip_sync)
@@ -160,7 +164,7 @@ def _get_ha_port(hass: HomeAssistant) -> int:
         port = urlparse(url).port
         if port is not None:
             return port
-    except (ImportError, HomeAssistantError, OSError):
+    except ImportError, HomeAssistantError, OSError:
         pass
 
     return DEFAULT_HA_PORT
@@ -173,7 +177,7 @@ class WibeeeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     def __init__(self) -> None:
         """Initialize the config flow."""
-        self._user_data: dict[str, str] = {}
+        self._user_data: dict[str, Any] = {}
         self._discovered_host: str | None = None
 
     async def async_step_dhcp(
@@ -192,14 +196,14 @@ class WibeeeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             is_wibeee = await api.async_check_connection()
             if not is_wibeee:
                 return self.async_abort(reason="not_wibeee_device")
-        except (TimeoutError, aiohttp.ClientError):
+        except TimeoutError, aiohttp.ClientError:
             return self.async_abort(reason="not_wibeee_device")
 
         self._discovered_host = host
         return await self.async_step_user()
 
     async def async_step_user(
-        self, user_input: dict[str, str] | None = None
+        self, user_input: dict[str, Any] | None = None
     ) -> config_entries.ConfigFlowResult:
         """Step 1: User enters the device IP."""
         errors: dict[str, str] = {}
@@ -290,7 +294,7 @@ class WibeeeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return WibeeeOptionsFlowHandler()
 
     async def async_step_reconfigure(
-        self, user_input: dict | None = None
+        self, user_input: dict[str, Any] | None = None
     ) -> config_entries.ConfigFlowResult:
         """Handle reconfiguration."""
         errors: dict[str, str] = {}

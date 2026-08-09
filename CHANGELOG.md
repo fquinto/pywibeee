@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## Library 0.1.4 (2026)
+
+### Changed
+
+* No functional changes. Releases are now published to PyPI through GitHub Actions
+  with Trusted Publishing, so uploads include PEP 740 provenance attestations.
+
 ## Library 0.1.1 (2026)
 
 ### Changed — CLI Library (`pywibeee/`)

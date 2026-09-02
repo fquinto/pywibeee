@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## Library 0.1.6 (2026)
+
+### Changed
+
+* Exhausted fetch retries are now logged at debug level instead of error.
+  Callers already surface the failure themselves (the fetch methods return
+  `None`), and an unreachable device would otherwise emit an error log line
+  on every poll.
+
 ## Library 0.1.5 (2026)
 
 ### Fixed

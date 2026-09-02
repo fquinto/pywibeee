@@ -2,7 +2,15 @@
 pywibeee
 ========
 
-Python library, CLI, and Home Assistant integration for WiBeee (old Mirubee) energy meters
+.. image:: https://github.com/fquinto/pywibeee/actions/workflows/tests.yml/badge.svg
+   :target: https://github.com/fquinto/pywibeee/actions/workflows/tests.yml
+   :alt: Tests
+
+.. image:: https://img.shields.io/pypi/v/pywibeee.svg
+   :target: https://pypi.org/project/pywibeee/
+   :alt: PyPI version
+
+Python library and CLI for WiBeee (old Mirubee) energy meters
 manufactured by Smilics / Circutor.
 
 .. contents:: Table of Contents
@@ -11,136 +19,92 @@ manufactured by Smilics / Circutor.
 Home Assistant Integration
 --------------------------
 
-Native custom component for Home Assistant. No HACS required.
+The official Home Assistant integration for WiBeee devices is built on top of
+this library and has been proposed to Home Assistant core:
 
-Supports two update modes (user chooses during setup):
+* Core pull request: https://github.com/home-assistant/core/pull/168419
+* Documentation pull request: https://github.com/home-assistant/home-assistant.io/pull/44815
 
-* **Local Push** (default, recommended) — the WiBeee sends data to HA's HTTP server in real time. Lowest latency.
-* **Polling** — HA periodically fetches ``status.xml`` from the device (configurable interval, default 30 s).
+The integration is polling-only (``local_polling``, 30-second interval), with
+config flow, DHCP discovery, and per-phase sensor entities. A development copy
+of the integration lives in `ha_core_component/ <ha_core_component/>`_.
 
-Features
-~~~~~~~~
-
-* 📡 **Local Push** (recommended) — real-time updates via HTTP push (no polling overhead).
-* 🔄 **Polling mode** — periodic fetch of ``status.xml`` (configurable interval, default 30 s).
-* 🔍 **DHCP auto-discovery** — devices with MAC prefix ``00:1E:C0`` are detected automatically.
-* ⚙️ **Config Flow UI**:
-
-  * Step 1: enter or confirm device IP.
-  * Step 2: select update mode (Local Push or Polling).
-
-* 🔧 **Options Flow**:
-
-  * Switch between push and polling.
-  * Configure polling interval.
-  * Re-run push auto-configuration.
-
-* ⚡ **Auto-configuration** (optional) — the integration can configure the WiBeee to push data to HA (IP + HTTP port).
-* 24 sensor types per phase: voltage, current, active/apparent/reactive power, frequency, power factor, active energy, reactive energy, angle, THD current & voltage with harmonics.
-* 🧩 **Device Registry**:
-
-  * Main device with manufacturer, model, firmware version, and link to the device web UI.
-  * Per-phase sub-devices (L1, L2, L3) linked via ``via_device``.
-
-* 🌍 **Translations**: English, Spanish, Catalan.
-* 12 device models: WBM, WBT, WMX, WTD, WX2, WX3, WXX, WBB, WB3, W3P, WGD, WBP.
-* 🧪 Fully async, non-blocking implementation.
+Python Library
+--------------
 
 Installation
 ~~~~~~~~~~~~
 
-Copy the ``custom_components/wibeee/`` folder into your Home Assistant ``config/custom_components/`` directory:
+Install from PyPI (dependencies are installed automatically):
 
 .. code-block:: sh
 
-   # From the repository root
-   cp -r custom_components/wibeee /path/to/ha/config/custom_components/
+   pip install pywibeee --upgrade
 
-Restart Home Assistant, then go to **Settings → Devices & Services → Add Integration → Wibeee Energy Monitor**.
+Or install the latest source:
 
-The integration will ask for:
+.. code-block:: sh
 
-1. The device IP address (or it will be pre-filled if discovered via DHCP).
-2. The update mode: **Local Push** (recommended) or **Polling**.
+   pip install git+https://github.com/fquinto/pywibeee
 
-If you choose Local Push with auto-configure enabled, the integration sends the HA IP and port to the WiBeee device and restarts it. The device will start pushing data to HA immediately.
+Usage
+~~~~~
 
-Requirements
-~~~~~~~~~~~~
+The library exposes an async client, ``WibeeeAPI``, built on aiohttp:
 
-* Home Assistant 2024.1.0 or later.
-* WiBeee device accessible on the local network (static IP or DHCP reservation recommended).
-* For Local Push: the WiBeee must be able to reach HA's HTTP port (8123 by default).
+.. code-block:: python
 
-Architecture
-~~~~~~~~~~~~
+   import asyncio
 
-The integration follows modern Home Assistant patterns (2024+):
+   import aiohttp
 
-* **``entry.runtime_data``** — typed runtime data (``WibeeeRuntimeData`` dataclass) instead of ``hass.data[DOMAIN]``.
-* **Single ``WibeeeCoordinator(DataUpdateCoordinator)``** — handles both polling (``update_interval=30s``) and push (``update_interval=None``) modes. Push data arrives via ``async_push_update()``.
-* **Single ``WibeeeSensor(CoordinatorEntity, SensorEntity)``** — one entity class for all sensor types.
-* **Deterministic entity creation** — phases are discovered from the device (1-phase vs 3-phase), then ALL 24 sensor types are created per phase. Sensors without data report ``available=False``.
-* **``ConfigEntryNotReady``** — raised on connection errors during setup so HA retries automatically.
-* **Narrow exceptions** — ``aiohttp.ClientError``, ``asyncio.TimeoutError``, ``ET.ParseError`` instead of bare ``except Exception``.
-* **Read-only data contract** — ``WibeeeData = Mapping[str, Mapping[str, str]]`` ensures coordinator data is not mutated downstream.
-* **XML parsing via stdlib** — uses ``xml.etree.ElementTree`` (no ``xmltodict`` dependency in the HA component).
-
-Discovery & Push
-~~~~~~~~~~~~~~~~
-
-* **DHCP discovery** — devices with MAC prefix ``00:1E:C0`` are auto-detected.
-* **Push receiver** — registers an HTTP endpoint at ``/Wibeee/receiverAvg`` on HA's built-in HTTP server. The WiBeee sends periodic GET requests with sensor values as query parameters. The receiver maps push parameter prefixes (``v``, ``a``, ``e``, ...) to XML sensor keys (``vrms``, ``p_activa``, ``energia_activa``, ...) and routes data to the coordinator.
-* **Auto-configure** — optionally sends HA's IP and port to the device so it starts pushing immediately.
-
-Design Decisions
-~~~~~~~~~~~~~~~~
-
-* **Component version (1.2.0) != library version (0.1.1)** — the HA custom component and the CLI library are versioned independently.
-* **``Mapping`` type alias** — ``WibeeeData`` uses ``Mapping`` (read-only) instead of ``dict`` to prevent accidental mutation of coordinator data by sensor entities.
-* **One coordinator, two modes** — instead of separate coordinator classes for polling and push, a single coordinator handles both. Push mode sets ``update_interval=None`` and exposes ``async_push_update()`` as the public API for incoming data.
-* **All sensors per phase** — even if a sensor type has no data yet, the entity is created and marked ``available=False``. This avoids entity churn when sensors appear/disappear.
-
-Quality & Testing
-~~~~~~~~~~~~~~~~~
-
-* **119 automated tests** covering coordinator, sensors, config flow, API, push receiver, buttons, and constants.
-* **Ruff** clean (no lint warnings).
-* Translations in English, Spanish, and Catalan.
-
-Quality Scale
-~~~~~~~~~~~~~
-
-This integration aims to meet the `Integration Quality Scale <https://developers.home-assistant.io/docs/integration_quality_scale_index/>`_:
-
-* ✅ Config flow
-* ✅ Options flow
-* ✅ Device registry support
-* ✅ Async implementation
-* ✅ Error handling
-* ✅ Logging
-* ✅ Translations
-* ✅ Tests
-* ✅ Documentation
-
-Notes for Reviewers
-~~~~~~~~~~~~~~~~~~~
-
-* Push mode uses the HA HTTP component (no custom ports opened).
-* Coordinator is used as a passive data bus for push updates (``update_interval=None``).
-* Entities are deterministic per discovered phase (hardware-defined).
-* Auto-configuration of push mode is optional and user-controlled.
-
-Tested With
-~~~~~~~~~~~
-
-* Multiple WiBeee device models (single-phase and three-phase).
-* Both push and polling modes.
-* DHCP discovery and manual setup.
+   from pywibeee import WibeeeAPI
 
 
-CLI Library
------------
+   async def main() -> None:
+       async with aiohttp.ClientSession() as session:
+           api = WibeeeAPI(session, "192.168.1.150")
+
+           info = await api.async_fetch_device_info()
+           print(info.model, info.mac_addr, info.firmware_version)
+
+           data = await api.async_fetch_sensors_data()
+           print(data["fase1"]["vrms"], data["fase4"]["p_activa"])
+
+
+   asyncio.run(main())
+
+Highlights:
+
+* ``async_fetch_device_info()`` — model, MAC address, firmware version, and
+  device ID. The whole discovery is bounded by an overall deadline (default
+  15 seconds, ``deadline`` parameter) and raises ``TimeoutError`` when
+  exceeded.
+* ``async_fetch_sensors_data()`` — all sensor readings from ``status.xml``,
+  organized per phase (``fase1``..``fase3``, ``fase4`` = total).
+* ``async_check_connection()`` — quick check that the host is a WiBeee device.
+* ``async_reboot()`` / ``async_reset_energy()`` — device actions.
+* ``async_configure_push_server()`` / ``async_get_push_server_config()`` —
+  configure or read the device's push destination.
+* ``async_fetch_device_diagnostics()`` — configuration variables for
+  diagnostics.
+* Each HTTP request has a 10-second timeout (configurable) with optional
+  retries; failed fetches are logged at debug level and return ``None``.
+
+Tests
+~~~~~
+
+.. code-block:: sh
+
+   pip install -e ".[test]"
+   pytest
+
+The suite covers XML parsing, HTTP errors, retries, the discovery deadline,
+push server configuration, device actions, and diagnostics. It runs in CI on
+Python 3.10, 3.12, and 3.14.
+
+CLI
+---
 
 Command line interface for WiBeee (old Mirubee) meters.
 
@@ -151,29 +115,6 @@ Features
 * Get version, model, device name, info, status, and sensor list.
 * Actions: reboot (via command or web), reset energy counters, configure push server.
 * Output formats: xml, json, plain text, file.
-* Uses ``httpx`` for both sync and async HTTP calls (no other HTTP dependencies).
-
-Requirements
-~~~~~~~~~~~~
-
-.. code-block:: sh
-
-   pip install xmltodict httpx
-
-Installation
-~~~~~~~~~~~~
-
-Install from PyPI:
-
-.. code-block:: sh
-
-   pip install pywibeee --upgrade
-
-Or install latest source:
-
-.. code-block:: sh
-
-   pip install git+https://github.com/fquinto/pywibeee
 
 Usage
 ~~~~~
@@ -248,7 +189,7 @@ Get sensors with autodiscover
 Configure push server
 ^^^^^^^^^^^^^^^^^^^^^
 
-Configure the WiBeee to push data to a server (e.g. Home Assistant on ``192.168.1.50:8600``):
+Configure the WiBeee to push data to a server (e.g. ``192.168.1.50:8600``):
 
 .. code-block:: sh
 
@@ -278,7 +219,8 @@ Local Push Protocol
 
 The WiBeee device can be configured to push data to a server via HTTP GET requests.
 The device sends periodic requests to the configured server with all sensor values
-as query parameters.
+as query parameters. The request path is hardcoded in the firmware; only the
+destination host and port are configurable.
 
 Endpoint
 ~~~~~~~~
@@ -464,9 +406,13 @@ GNU General Public License version 2
 * https://opensource.org/licenses/GPL-2.0
 
 
-Community
----------
+Donations for software development
+----------------------------------
 
-Join the Telegram community channel for support, questions, and discussion:
+If this project is useful to you, you can support its development:
 
-* https://t.me/wibeee_community
+.. image:: https://img.shields.io/badge/Donate-PayPal-blue.svg
+   :target: https://www.paypal.com/donate/?business=XQQJHGVPHLD7W&no_recurring=0&item_name=Thank+you+for+collaborating+and+helping+the+development+of+software+improvements.&currency_code=EUR
+   :alt: Donate with PayPal
+
+Thank you for collaborating and helping the development of software improvements.

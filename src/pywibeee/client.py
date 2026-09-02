@@ -126,7 +126,9 @@ class WibeeeAPI:
         if root.tag != "response":
             return None
 
-        return {child.tag: child.text or "" for child in root}
+        # An empty XML element has text None; keep it None instead of
+        # coercing to "" so callers get a clear "no value" signal.
+        return {child.tag: child.text for child in root}
 
     async def async_fetch_device_info(
         self, retries: int = 3, deadline: float | None = 15.0
@@ -263,7 +265,7 @@ class WibeeeAPI:
 
     async def async_fetch_sensors_data(
         self, retries: int = 2
-    ) -> dict[str, dict[str, str]] | None:
+    ) -> dict[str, dict[str, str | None]] | None:
         """Fetch and parse status.xml, returning organized sensor data.
 
         Returns a dict organized by phase:
@@ -278,7 +280,7 @@ class WibeeeAPI:
         if not status:
             return None
 
-        phases: dict[str, dict[str, str]] = {}
+        phases: dict[str, dict[str, str | None]] = {}
         for key, value in status.items():
             if key.startswith("fase"):
                 # Keys are like "fase1_vrms", "fase2_irms", etc.

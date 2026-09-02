@@ -232,6 +232,16 @@ class TestAsyncFetchStatus:
         result = await api.async_fetch_status(retries=0)
         assert result is None
 
+    async def test_empty_element_is_none(self) -> None:
+        """An empty XML element yields None, not an empty string."""
+        xml = "<response><fase1_vrms>230.5</fase1_vrms><fase1_irms/></response>"
+        session = _make_session([_make_response(200, xml)])
+        api = WibeeeAPI(session, "192.168.1.150")
+        result = await api.async_fetch_status(retries=0)
+        assert result is not None
+        assert result["fase1_vrms"] == "230.5"
+        assert result["fase1_irms"] is None
+
 
 class TestAsyncFetchSensorsData:
     """Tests for sensor data parsing from status.xml."""

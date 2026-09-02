@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## Library 0.1.8 (2026)
+
+### Changed
+
+* Empty XML elements in `status.xml` are now reported as `None` instead of
+  being coerced to an empty string, so callers get a clear "no value"
+  signal. `async_fetch_sensors_data` phase values are typed
+  `str | None` accordingly.
+
 ## Library 0.1.7 (2026)
 
 ### Fixed

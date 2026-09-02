@@ -127,13 +127,29 @@ class WibeeeAPI:
         return {child.tag: child.text or "" for child in root}
 
     async def async_fetch_device_info(
-        self, retries: int = 3
+        self, retries: int = 3, deadline: float | None = 15.0
     ) -> WibeeeDeviceInfo | None:
         """Fetch device information (model, MAC, firmware, etc.).
 
         Tries to get info from status.xml first. Falls back to
         devices.xml + values.xml and web scraping if needed.
+
+        Discovery issues several sequential HTTP requests, each with its own
+        timeout and retries. The whole operation is bounded by ``deadline``
+        seconds and raises TimeoutError when exceeded, so an unreachable
+        device cannot stall the caller for retries x requests x timeout.
+        Pass ``deadline=None`` to disable the overall bound.
         """
+        if deadline is None:
+            return await self._async_fetch_device_info(retries)
+        return await asyncio.wait_for(
+            self._async_fetch_device_info(retries), deadline
+        )
+
+    async def _async_fetch_device_info(
+        self, retries: int
+    ) -> WibeeeDeviceInfo | None:
+        """Fetch device information without an overall deadline."""
         # Try status.xml first - it often contains model and version
         status = await self.async_fetch_status(retries=retries)
 

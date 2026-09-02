@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## Library 0.1.5 (2026)
+
+### Fixed
+
+* `async_fetch_device_info` retries applied to each internal fallback request
+  (status, device ID, MAC, model, firmware), so an unreachable device could
+  stall discovery for retries x requests x timeout (over 3 minutes with the
+  defaults). The whole discovery is now bounded by a new `deadline` parameter
+  (default 15 seconds) and raises `TimeoutError` when exceeded. Pass
+  `deadline=None` to restore the old unbounded behavior.
+
 ## Library 0.1.4 (2026)
 
 ### Changed

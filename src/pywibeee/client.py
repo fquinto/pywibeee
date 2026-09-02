@@ -94,7 +94,9 @@ class WibeeeAPI:
                 wait = min(2 ** (attempt + 1) * 0.1, 5.0)
                 await asyncio.sleep(wait)
 
-        _LOGGER.error("Failed to fetch %s after %d attempts", url, retries + 1)
+        # Debug, not error: callers surface failures themselves, and an
+        # unreachable device would otherwise spam the log on every poll.
+        _LOGGER.debug("Failed to fetch %s after %d attempts", url, retries + 1)
         return None
 
     async def async_fetch_status(self, retries: int = 2) -> dict[str, Any] | None:

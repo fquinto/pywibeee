@@ -1,6 +1,6 @@
 # Copyright 2019 @fquinto. All rights reserved.
 
-__version__ = "0.1.6"
+__version__ = "0.1.7"
 
 from pywibeee.client import WibeeeAPI, WibeeeDeviceInfo
 

@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## Library 0.1.7 (2026)
+
+### Fixed
+
+* The debug-level logging change announced in 0.1.6 did not actually ship in
+  that release; it is included now. A test asserts that exhausted retries do
+  not log above debug level.
+
 ## Library 0.1.6 (2026)
 
 ### Changed

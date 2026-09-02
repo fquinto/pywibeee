@@ -8,6 +8,7 @@ port conversion.
 from __future__ import annotations
 
 import asyncio
+import logging
 from datetime import timedelta
 from unittest.mock import AsyncMock, MagicMock
 
@@ -180,6 +181,25 @@ class TestAsyncFetchUrl:
         api = WibeeeAPI(session, "192.168.1.150")
         result = await api.async_fetch_url("http://x/test", retries=2)
         assert result is None
+
+    async def test_retry_exhaustion_logs_debug_only(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """An unreachable device must not log above debug level."""
+        resp = MagicMock()
+        resp.__aenter__ = AsyncMock(side_effect=aiohttp.ClientError("conn failed"))
+        resp.__aexit__ = AsyncMock(return_value=False)
+        session = _make_session([resp, resp])
+        api = WibeeeAPI(session, "192.168.1.150")
+
+        with caplog.at_level(logging.DEBUG, logger="pywibeee.client"):
+            await api.async_fetch_url("http://x/test", retries=1)
+
+        pywibeee_records = [
+            r for r in caplog.records if r.name.startswith("pywibeee")
+        ]
+        assert pywibeee_records
+        assert all(r.levelno <= logging.DEBUG for r in pywibeee_records)
 
 
 class TestAsyncFetchStatus:
